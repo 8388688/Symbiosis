@@ -1,9 +1,4 @@
 """
-0.5 更新：
-- :construction: 静默更新(BETA)
-- 【破坏性更新】修整 config.json 格式
-- - 加入 globalsettings
-- - exec 选项可以用 disable 禁用
 0.4 更新：
 - 加入日志记录功能
 0.3.1 紧急更新：
@@ -20,12 +15,13 @@ import colorlog
 import ctypes
 import json
 import logging
-import requests
 import os
 import sys
 import time
 
 from os import PathLike
+
+__version__ = "v0.4.0"
 
 
 def is_exec():
@@ -53,42 +49,15 @@ def run(config: dict):
     exec_fp: PathLike = config.get("exec")
     uac_admin: bool = config.get("uac_admin", fr_json.get("uac_admin", False))
     workdir: PathLike = config.get("workdir", fr_json.get("work_dir", os.getcwd()))
-    fake: bool = config.get("disable", False)
     # if is_admin():
     #     logger.info(f"正在使用管理员权限运行 - 非常棒！")
     # else:
     #     logger.info(f"准备以管理员身份重启. . . . . .")
-    if not fake:
-        logger.info(f"启动: {exec_fp=}, {parameters_orig=}, {uac_admin=}, {workdir=}")
-        ctypes.windll.shell32.ShellExecuteW(None, "runas" if uac_admin else None, exec_fp, parameters, workdir, 1)
-    else:
-        logger.info(f"假装启动: {exec_fp=}")
+    logger.info(f"启动: {exec_fp=}, {parameters_orig=}, {uac_admin=}, {workdir=}")
+    ctypes.windll.shell32.ShellExecuteW(None, "runas" if uac_admin else None, exec_fp, parameters, workdir, 1)
     # sys.exit(0)
 
 
-def get_update():
-    exit_code = 0
-
-    exit_code = 1
-    logger.error(f"{get_update.__name__} 尚未实现")
-    return exit_code
-    try:
-        req = requests.get("https://raw.githubusercontent.com/8388688/Symbiosis/main/version.json")
-    except ConnectionError as e:
-        logger.error(f"Connect Error {e.winerror}: {e.strerror}")
-        exit_code = 1
-    except Exception as e:
-        logger.error(f"Wildcard Error: {e.args}, {e}")
-        exit_code = 1
-    else:
-        json_0 = req.json()
-        # for i in json_0["content"]:
-            # pass
-
-    return exit_code
-
-
-if not os.path.exists(get_exec("__Logs__")): os.mkdir("__Logs__")
 console_formatter = colorlog.ColoredFormatter(
     "%(log_color)s[%(asctime)s.%(msecs)03d] %(filename)s -> %(name)s %(funcName)s line:%(lineno)d [%(levelname)s] : %(message)s",
     datefmt="%Y-%m-%dT%H.%M.%SZ",
@@ -102,7 +71,7 @@ console_formatter = colorlog.ColoredFormatter(
     }
 )
 file_formatter = logging.Formatter(
-    "[%(asctime)s.%(msecs)03d] %(filename)s -> %(name)s %(funcName)s line:%(lineno)d [%(levelname)s] : %(message)s",
+    "[%(asctime)s.%(msecs)03d] %(filename)s -> %(name)s%(funcName)s line:%(lineno)d [%(levelname)s] : %(message)s",
     datefmt="%Y-%m-%dT%H.%M.%SZ",
 )
 console = colorlog.StreamHandler()
@@ -135,23 +104,16 @@ with open(fp, "r", encoding="utf-8") as f:
 
 """
 {
-    "exec": {
-        "1": {
-            "parameters": List[str] = ["p1", "p2", ...]
-            "exec": PathLike,
-            "uac_admin": bool,
-            "workdir": PathLike,
-            "disable": false
-        },
-        "2": {
-            ...
-        },
+    "1": {
+        "parameters": List[str] = ["p1", "p2", ...]
+        "exec": PathLike,
+        "uac_admin": bool,
+        "workdir": PathLike,
     },
-    "self-upgrade": {
-        "retry": -1,
-        "json-url": "",
-        "download": ""
-    }
+    "2": {
+        ...
+    },
+
 }
 """
 
