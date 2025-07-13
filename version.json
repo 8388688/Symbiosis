@@ -3,5 +3,36 @@
             "v0.3.0": "https://github.com/8388688/Symbiosis/releases/download/v0.3.0/Symbiosis.exe",
             "v1.0": "https://github.com/8388688/Symbiosis/releases/download/v1.0/Symbiosis.exe",
             "v1.1": "https://github.com/8388688/Symbiosis/releases/download/v1.1/Symbiosis.exe"
+        },
+        "symbiosis-update": {
+            "v0.3.0": "https://github.com/8388688/Symbiosis/releases/download/v0.3.0/Symbiosis.exe",
+            "v1.0": "https://github.com/8388688/Symbiosis/releases/download/v1.0/Symbiosis.exe",
+            "v1.1": "https://github.com/8388688/Symbiosis/releases/download/v1.1/Symbiosis.exe"
+        },
+        "config-file-update": {
+            "2025.07.02.00.00.00": {
+    "execute": {
+
+    },
+    "download": {
+        
+    },
+    "upgrade": {
+        "json-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/version.json",
+        "config-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/cloud-config.json",
+        "enable-config-update": true,
+        "channel": 4,
+        "retry": -1,
+        "download": "",
+        "specific_version_exclude": [],
+        "downgrade_install": null
+    },
+    "globalsettings": {
+        "retry": 1,
+        "uac_admin": false,
+        "keep": true,
+        "parameters": []
+    }
+            }
         }
     }
