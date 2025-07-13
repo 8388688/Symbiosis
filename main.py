@@ -1,9 +1,12 @@
 """
-1.0 更新：
-- :construction: 静默更新(BETA)
-- 不支持 0.4.0 以下的版本
+1.1 更新【破坏性更新】：
+- 完成静默更新
+- :art: 修正程序内部错误码
+- :sparkles: 现在配置文件也可以静默更新啦
+1.0 更新（【破坏性更新】不支持 0.4.0 以下的版本）
+- :sparkles: 静默更新(BETA)
 - 【破坏性更新】修整 config.json 格式
-- - 加入 globalsettings
+- - 加入 download, upgrade 选项
 - - exec 选项可以用 disable 禁用
 0.4 更新：
 - 加入日志记录功能
@@ -16,11 +19,7 @@
 - 修复配置文件路径错误的 bug
 """
 import argparse
-from ast import Lambda
-from encodings.punycode import T
-from genericpath import exists
 import logging.handlers
-import re
 import colorlog
 import ctypes
 import json
@@ -32,10 +31,11 @@ import time
 
 from os import PathLike
 from urllib3.exceptions import ProtocolError
-from requests.exceptions import SSLError, MissingSchema, ConnectionError, InvalidURL, InvalidSchema, RetryError, RequestException
-from http.client import RemoteDisconnected
+from requests.exceptions import SSLError, MissingSchema, ConnectionError, InvalidURL, InvalidSchema, RequestException
+# from typing import AnyStr
 
-__version__ = "v1.0.0"
+__version__ = "v1.1"
+CAN_RETRY_CODE = tuple(range(1, 100)) + ()
 
 
 def is_exec():
@@ -73,6 +73,12 @@ def decode_version(version_str: str):
     return ver_code
 
 
+def decode_config_time_version(version_str: str):
+    ver_time = time.mktime(time.strptime(version_str, "%Y.%m.%d.%H.%M.%S"))
+    return ver_time
+
+
+
 def check_attributes(attr):
     result = dict()
     for i in dir(attr):
@@ -99,31 +105,42 @@ def run(config: dict):
     # sys.exit(0)
 
 
-
 def download_api(url, file_path):
     """a simple download script
 
     download file on Internet in silence
     code:
+    [1..99] 是网络问题（会触发重试机制）
+    [100..199] 是用户问题（【不会】触发重试机制）
+    [200..299] 是 OS 问题（【不会】触发重试机制）
     0 = normal(正常)
-    -1 = unknown error
-    -2 = Protocol Error
-    -3 = the file is not recognizable
-    -4 = downloading was canceled by user
-    -5 = python.SSLError
-    -6 = timeout error
-    -7 = SSL 证书无效或已过期
-    -8 = URL 格式不正确
-    -9 = 无法连接
-    -10 = 无法辨识的协议
-    -11 = 协议格式不正确
-    
+    1 = unknown error
+    2 = Protocol Error
+    3 = the file is not recognizable
+    4 = 未使用
+    5 = python.SSLError
+    6 = timeout error
+    7 = SSL 证书无效或已过期
+    8 = URL 格式不正确
+    9 = 无法连接
+    10 = 无法辨识的协议
+    11 = 协议格式不正确
+
+    100 = 用户禁用了更新
+    101 = Read configure file ERROR: symbiosis-update 键值对为空
+    102 = 强制更新的版本号标志错误
+
+    201 = 保存的目标文件所在的目录不存在
+
     :param url: the link to download on Internet
     :param file_path: current directory if this param is None else use `file_path`
     :param file_name: auto generate if this param is None else use `file_name`
     :param savemode: 保存方式
     :param nodisplay: download without display anything if `nodisplay == True`
     """
+    if not os.path.isdir(os.path.dirname(file_path)):
+        logger.error(f"无法保存至 {file_path}")
+        return 201
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, '
                       'like Gecko) Chrome/107.0.0.0 Safari/537.36',
@@ -133,36 +150,36 @@ def download_api(url, file_path):
         r = requests.get(url, stream=True, verify=True, headers=headers)
     except SSLError:
         logger.error(f'SSLError! {url} is not secure.')
-        return -7 # SSL 证书无效或已过期
+        return 7 # SSL 证书无效或已过期
     except MissingSchema:
         logger.error(f"Invalid URL {url}: No scheme supplied")
-        return -11 # 协议格式不正确
+        return 11 # 协议格式不正确
     except InvalidURL:
         logger.error(f"Invalid URL: Failed to parse {url}")
-        return -8 # URL 格式不正确
+        return 8 # URL 格式不正确
     except InvalidSchema:
         logger.error(f"No connection adapters were found for {url}")
-        return -10 # 无法辨识的协议
+        return 10 # 无法辨识的协议
     except ProtocolError as e:
         logger.error(f"ProtocolError")
         for k, v in check_attributes(e.args[0]).items():
             logger.error(f"{k}: {v}")
-        return -2
+        return 2
     except TimeoutError as e:
         logger.error(f"Connection Timeout ({e.winerror}): {e.strerror}")
-        return -6
+        return 6
     except ConnectionError as e:
         # logger.error(f"Failed to connect {url}: {e.args[0].reason}")
         logger.error(f"Failed to connect {url}: {e.args}")
         # for k, v in check_attributes(e.args[0]).items():
         #     logger.error(f"{k}: {v}")
-        return -9 # 无法连接
+        return 9 # 无法连接
     except RequestException as e:
         logger.error(f"Request Error {url} - [Error {e.args.count}, {e.args.index}]")
-        return -1
+        return 1
     except Exception as e:
         logger.error(f"Unexpected Error: {e.args}")
-        return -1
+        return 1
     else:
         logger.debug("ok")
     filesize = r.headers.get("content-length", -1)
@@ -193,12 +210,12 @@ def download(config):
         tmp = os.path.splitext(filepath)
         filepath = tmp[0] + time.strftime(".%Y-%m-%d_%H.%M.%S", time.localtime(time.time())) + tmp[-1]  # 前面的 “.” 不能省略
     cnt = 0
-    status = -1
+    status = 1
     while not (0 <= config["retry"] - cnt < 1):
         status = download_api(url, filepath)
-        if status != 0:
+        if status != 0 and status in CAN_RETRY_CODE:
             cnt += 1
-            logger.info(f"Download failed, still trying... ({cnt}/{config['retry'] if config['retry'] >= 0 else 'Infinite'})")
+            logger.info(f"Download failed, still trying... ({cnt}/{config['retry'] if config['retry'] >= 0 else 'Infinity'})")
         else:
             break
     else:
@@ -208,36 +225,58 @@ def download(config):
 
 def get_update():
     upgrade_config = fr_json.get("upgrade", dict())
+    local_make_time = fr_json.get("make-time", -1)
     retry = upgrade_config.get("retry", 1)
     upgrade_json_fp = get_exec() + ".upgrade"
     upgrade_execute_fp = get_exec() + ".tmp"
     upgrade_old_execute_fp = get_exec() + ".old"
+    downgrade_sign = upgrade_config.get("downgrade_install", None)
     upgrade_content = []
-    logger.info("Downloading configure file. . .")
+    logger.info("Downloading version of configure file. . .")
     exit_code = download({"url": upgrade_config["json-url"], "filepath": upgrade_json_fp, "retry": retry, "replace-in=force": True})
     if retry == 0:
         logger.info("更新已禁用")
-        return -100
+        return 100
     if exit_code != 0:
-        logger.error(f"Cannot download configure file (Error {exit_code})")
+        logger.error(f"Cannot download version of configure file (Error {exit_code})")
         return exit_code
     logger.info("Resolving configure file. . .")
     with open(upgrade_json_fp, "r", encoding="utf-8") as f:
         head_json = json.loads(f.read())
     if os.path.exists(upgrade_json_fp): os.unlink(upgrade_json_fp)
-    if not head_json.get("update", []):
-        logger.error("Read configure file ERROR: update 键值对为空")
-        return -101  # -101 = Read configure file ERROR: update 键值对为空
-    downgrade_sign = upgrade_config.get("downgrade_install", None)
+    if upgrade_config.get("enable-config-update", False):
+        for k, v in head_json.get("enable-config-update", dict()).items():
+            if decode_config_time_version(k) > decode_config_time_version(local_make_time):
+                upgrade_content.append([k, v])
+        upgrade_content.sort(key=lambda x: decode_config_time_version(x[0]), reverse=True)
+        if upgrade_content:
+            if len(upgrade_content) > 1:
+                logger.info(f"检查到多个配置文件的累积更新，{", ".join([i[0] for i in upgrade_content])}")
+                logger.info(f"将自动为您更新到最新的一个版本 {upgrade_content[0][0]}")
+            else:
+                pass
+            upgrade_content[0][1].update({"make-time": k})
+            with open(get_resource(args.cfgfile), "w", encoding="utf-8") as f:
+                f.write(json.dumps(upgrade_content[0][1]))
+        else:
+            logger.info("没有新的配置文件可用")
+    else:
+        logger.info("更新配置文件 - 选项已禁用")
+
+    upgrade_content = []
+    #########################################################
+    if not head_json.get("symbiosis-update", []):
+        logger.error("Read configure file ERROR: symbiosis-update 键值对为空")
+        return 101
     if downgrade_sign is not None:
         logger.info(f"发现无视版本的强制更新标志，准备更新至 {downgrade_sign}")
-        if downgrade_sign in head_json["update"].keys():
-            download({"url": head_json["update"][downgrade_sign], "filepath": upgrade_execute_fp, "retry": retry, "replace-in=force": True})
+        if downgrade_sign in head_json["symbiosis-update"].keys():
+            download({"url": head_json["symbiosis-update"][downgrade_sign], "filepath": upgrade_execute_fp, "retry": retry, "replace-in=force": True})
         else:
-            logger.error(f"强制更新标志应该是 {', '.join(head_json["update"].keys())} 之一，而不是 {downgrade_sign}")
-            exit_code = -102
+            logger.error(f"强制更新标志应该是 {', '.join(head_json["symbiosis-update"].keys())} 之一，而不是 {downgrade_sign}")
+            exit_code = 102
     else:
-        for k, v in head_json["update"].items():
+        for k, v in head_json["symbiosis-update"].items():
             if decode_version(k) > decode_version(__version__) and k not in upgrade_config.get("specific_version_exclude", []):
                 upgrade_content.append([k, v])
         upgrade_content.sort(key=lambda x: decode_version(x[0]), reverse=True)
@@ -245,19 +284,26 @@ def get_update():
             if len(upgrade_content) > 1:
                 logger.info(f"检查到多个版本的累积更新: {', '.join([i[0] for i in upgrade_content])}")
                 logger.info(f"将自动为您更新到最新版本 {upgrade_content[0][0]}")
+            else:
+                pass
             download({"url": upgrade_content[0][1], "filepath": upgrade_execute_fp, "retry": retry, "replace-in=force": True})
-            if exists(upgrade_old_execute_fp): os.unlink(upgrade_old_execute_fp)
+            if os.path.exists(upgrade_old_execute_fp): os.unlink(upgrade_old_execute_fp)
             os.rename(get_exec(), upgrade_old_execute_fp)
             os.rename(upgrade_execute_fp, get_exec())
         else:
             logger.info("暂无更新")
     """head_json
     {
-        "update": {
+        "symbiosis-update": {
             "v0.3": download url 0.3,
             "v0.4": download url 0.4,
             "v1.0": download url 1.0,
             ...
+        },
+        "config-file-update: {
+            "2025.07.02.00.00.00": {
+                <config-file-entity>, // 此子字典中【不】含有 make-time 键值
+            }
         }
     }
 
@@ -272,6 +318,7 @@ def get_update():
 
 
 if not os.path.exists(get_resource("__SymbiosisLogs__")): os.mkdir(get_resource("__SymbiosisLogs__"))
+os.chdir(get_resource())
 console_formatter = colorlog.ColoredFormatter(
     "%(log_color)s[%(asctime)s.%(msecs)03d] %(filename)s -> %(name)s %(funcName)s line:%(lineno)d [%(levelname)s] : %(message)s",
     datefmt="%Y-%m-%dT%H.%M.%SZ",
@@ -342,18 +389,20 @@ with open(fp, "r", encoding="utf-8") as f:
             * n（n 为大于 1 的整数）最多 n - 1 次重试
             * -1 = 无限重试
             */
-            "keep": bool, // 下载完成后是否在配置文件中删除此下载项
-            "expire": bool, // 此项不应由用户设定，表示是否成功下载过该任务
+            "keep": bool, // 下载完成后是否在配置文件中删除此下载项。
+            "expire": bool, // 此项不应由用户设定，表示是否成功下载过该任务。
         }, 
         ...
     },
     "upgrade": {
         "json-url": "",
+        "config-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/cloud-config.json", // 实际上并未使用
         "channel": ..., // 实际尚未使用
-        "retry": -1,
+        "retry": -1, // 此配置选项同时兼顾主程序和配置文件的更新。
+        "enable-config-update": true, // 此选项优先级高于 retry，但只决定配置文件的更新，主程序更新不受此影响。
         "download": "", // 实际尚未使用
-        "specific_version_exclude": [], // 空序列表示接受所有更新，序列中的元素表示排除特定版本更新
-        "downgrade_install": "v0.1" || null, // 强制降级安装, null 表示不启用降级安装，此选项无视 specific_version_exclude 的排除设置
+        "specific_version_exclude": [], // 空序列表示接受所有更新，序列中的元素表示排除特定版本更新。
+        "downgrade_install": "v0.1" || null, // 强制降级安装, null 表示不启用降级安装，此选项无视 specific_version_exclude 的排除设置。
     }
     "run": {// 仍在可行性分析中}
 }
