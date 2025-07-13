@@ -245,7 +245,7 @@ def get_update():
         head_json = json.loads(f.read())
     if os.path.exists(upgrade_json_fp): os.unlink(upgrade_json_fp)
     if upgrade_config.get("enable-config-update", False):
-        for k, v in head_json.get("enable-config-update", dict()).items():
+        for k, v in head_json.get("config-file-update", dict()).items():
             if decode_config_time_version(k) > decode_config_time_version(local_make_time):
                 upgrade_content.append([k, v])
         upgrade_content.sort(key=lambda x: decode_config_time_version(x[0]), reverse=True)
