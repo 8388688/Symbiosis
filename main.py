@@ -1,4 +1,6 @@
 """
+1.1-release 紧急补丁：
+- 修正 1.0 以及更低版本无法正确判定版本号的 bug
 1.1 更新【破坏性更新】：
 - 完成静默更新
 - :art: 修正程序内部错误码
@@ -61,22 +63,24 @@ def is_admin() -> bool:
 
 
 def decode_version(version_str: str):
-    RATE = 10000
+    RATE = 1000
     # 高版本号相对低一级的版本号的进制
     # 如：在 RATE = 100 的情况下，v0.4.1 等价于 v0.3.101 和 v0.2.201
+    dot_rate = version_str.count(".")
     lst_ver_code = version_str.removeprefix("v").removeprefix("V").split(".")
     ver_code = 0
     ch = 0
     for i in (int(j) for j in lst_ver_code[::-1]):
         ver_code += RATE ** ch * i
         ch += 1
+    ver_code *= RATE ** (4 - dot_rate)
+    # 理论上 `ver_code *= RATE ** -dot_rate` 也是可以的
     return ver_code
 
 
 def decode_config_time_version(version_str: str):
     ver_time = time.mktime(time.strptime(version_str, "%Y.%m.%d.%H.%M.%S"))
     return ver_time
-
 
 
 def check_attributes(attr):
@@ -412,8 +416,7 @@ with open(fp, "r", encoding="utf-8") as f:
 """
 
 if __name__ == "__main__":
-    # if fr_json.get("exec", None) is not None:
-    #     run(fr_json)
+    logger.info(f"当前版本：{__version__}")
     for k, v in fr_json.get("execute", dict()).items():
         run(v)
     for k, v in fr_json.get("download", dict()).items():
