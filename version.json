@@ -2,12 +2,12 @@
         "update": {
             "v0.3.0": "https://github.com/8388688/Symbiosis/releases/download/v0.3.0/Symbiosis.exe",
             "v1.0": "https://github.com/8388688/Symbiosis/releases/download/v1.0/Symbiosis.exe",
-            "v1.1": "https://github.com/8388688/Symbiosis/releases/download/v1.1/Symbiosis.exe"
+            "v1.1": "https://github.com/8388688/Symbiosis/releases/download/v1.1-release/Symbiosis.exe"
         },
         "symbiosis-update": {
             "v0.3.0": "https://github.com/8388688/Symbiosis/releases/download/v0.3.0/Symbiosis.exe",
             "v1.0": "https://github.com/8388688/Symbiosis/releases/download/v1.0/Symbiosis.exe",
-            "v1.1": "https://github.com/8388688/Symbiosis/releases/download/v1.1/Symbiosis.exe"
+            "v1.1": "https://github.com/8388688/Symbiosis/releases/download/v1.1-release/Symbiosis.exe"
         },
         "config-file-update": {
             "2025.07.02.00.00.00": {
