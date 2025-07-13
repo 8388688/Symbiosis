@@ -246,6 +246,9 @@ def get_update():
     if os.path.exists(upgrade_json_fp): os.unlink(upgrade_json_fp)
     if upgrade_config.get("enable-config-update", False):
         for k, v in head_json.get("config-file-update", dict()).items():
+            if local_make_time == -1:
+                logger.warning(f"make-time 键值对未设置，Symbiosis 将默认为您填入缺省参数 1970.1.1.0.0.0")
+                local_make_time = "1970.1.1.0.0.0"
             if decode_config_time_version(k) > decode_config_time_version(local_make_time):
                 upgrade_content.append([k, v])
         upgrade_content.sort(key=lambda x: decode_config_time_version(x[0]), reverse=True)
