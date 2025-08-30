@@ -1,6 +1,6 @@
     {
+        "//": "symbiosis-update 键值对为兼容 1.2 以下的版本而保留，未来将不再更新",
         "symbiosis-update": {
-            "//": "为兼容 1.2 以下的版本而保留，未来将不再更新",
             "v0.3.0": "https://github.com/8388688/Symbiosis/releases/download/v0.3.0/Symbiosis.exe",
             "v1.0": "https://github.com/8388688/Symbiosis/releases/download/v1.0/Symbiosis.exe",
             "v1.1": "https://github.com/8388688/Symbiosis/releases/download/v1.1/Symbiosis.exe",
