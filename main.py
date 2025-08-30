@@ -1,12 +1,13 @@
 import argparse
-import logging.handlers
 import colorlog
 import ctypes
+import hashlib
 import json
 import logging
+import logging.handlers
+import os
 import re
 import requests
-import os
 import sys
 import time
 
@@ -15,7 +16,7 @@ from urllib3.exceptions import ProtocolError
 from requests.exceptions import SSLError, MissingSchema, ConnectionError, InvalidURL, InvalidSchema, RequestException
 # from typing import AnyStr
 
-__version__ = "v1.2.2"
+__version__ = "v1.2.3"
 
 
 def is_exec():
@@ -118,6 +119,18 @@ def check_time_can_do(config):
     return datetime.group(0), (not datetime.group(1) or decode_datetime(datetime.group(1)) <= time.time()) and \
         (not datetime.group(2) or time.time()
          <= decode_datetime(datetime.group(2)))
+
+
+def md5sum(fpath: str, algorithm: str, buffering: int = 8096) -> str:
+    with open(fpath, 'rb') as f:
+        result = hashlib.new(algorithm)
+        for chunk in iter(lambda: f.read(buffering), b''):
+            result.update(chunk)
+        return result.hexdigest()
+
+
+def md5check(fpath, algorithm, expected_hash):
+    return md5sum(fpath, algorithm).lower() == expected_hash.lower()
 
 
 def run(config: dict):
@@ -311,16 +324,23 @@ def get_update():
     #########################################################
     if upgrade_config.get("console", False):
         up_list_key = "symbiosis-update-con"
+        up_hash_key = "checksum-sha256-con"
     else:
         up_list_key = "symbiosis-update-win"
+        up_hash_key = "checksum-sha256-win"
     if not head_json.get(up_list_key, []):
         logger.error(f"Read configure file ERROR: {up_list_key} 键值对为空")
         return 129
     if downgrade_sign is not None:
         logger.info(f"发现无视版本的强制更新标志，准备更新至 {downgrade_sign}")
         if downgrade_sign in head_json[up_list_key].keys():
-            download({"url": head_json[up_list_key][downgrade_sign],
-                     "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False})
+            while not os.path.exists(upgrade_execute_fp) or md5check(upgrade_execute_fp, "sha256", head_json[up_hash_key][downgrade_sign]):
+                if os.path.exists(upgrade_execute_fp):
+                    logger.error(f"{upgrade_execute_fp} 文件哈希值校验不一致")
+                download({"url": head_json[up_list_key][downgrade_sign],
+                         "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False})
+            else:
+                logger.info("文件哈希校验一致")
             if downgrade_config.get("permanent", False):
                 logger.debug("已清除一次性更新标志")
                 downgrade_config.update({"downgrade": None})
@@ -345,8 +365,13 @@ def get_update():
                 logger.info(f"将自动为您更新到最新版本 {upgrade_content[0][0]}")
             else:
                 pass
-            download(
-                {"url": upgrade_content[0][1], "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False})
+            while not os.path.exists(upgrade_execute_fp) or md5check(upgrade_execute_fp, "sha256", head_json[up_hash_key][downgrade_sign]):
+                if os.path.exists(upgrade_execute_fp):
+                    logger.error(f"{upgrade_execute_fp} 文件哈希值校验不一致")
+                download(
+                    {"url": upgrade_content[0][1], "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False})
+            else:
+                logger.info("文件哈希校验一致")
         else:
             logger.info("暂无更新")
             return exit_code

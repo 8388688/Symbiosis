@@ -1,3 +1,6 @@
+# 1.2.3 更新：
+- 下载时校验文件哈希值
+
 # 1.2.2 更新【破坏性更新】：
 - 将 update 中的 downgrade_install 参数分离出来，单独成一个文件 downgrade.json
 - 修复 downgrade_install 降级安装时无法正常将旧程序重命名的问题
