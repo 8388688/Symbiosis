@@ -15,7 +15,7 @@ from urllib3.exceptions import ProtocolError
 from requests.exceptions import SSLError, MissingSchema, ConnectionError, InvalidURL, InvalidSchema, RequestException
 # from typing import AnyStr
 
-__version__ = "v1.2.1"
+__version__ = "v1.2.2"
 
 
 def is_exec():
@@ -41,11 +41,7 @@ def is_admin() -> bool:
 
 
 def can_retry(code: int):
-    """
-    code 取值范围：[0..255] 的整数
-    0 表示正常，不会触发重试机制
-    [1..127] 表示会触发重试机制的异常
-    [128..255] 表示【不会】触发重试机制的异常
+    """retry.md
     """
     # assert 0 <= code <= 255
     if 0 <= code <= 255:
@@ -159,30 +155,7 @@ def download_api(url, file_path, headers):
     """a simple download script
 
     download file on Internet in silence
-    code:
-    [1..127] 是网络问题
-    [128..191] 是用户问题
-    [192..255] 是 OS 问题
-    触发重试机制参考 can_retry()
-
-    0 = normal(正常)
-    1 = unknown error
-    2 = Protocol Error
-    3 = the file is not recognizable
-    4 = 未使用
-    5 = python.SSLError
-    6 = timeout error
-    7 = SSL 证书无效或已过期
-    8 = URL 格式不正确
-    9 = 无法连接
-    10 = 无法辨识的协议
-    11 = 协议格式不正确
-
-    128 = 用户禁用了更新
-    129 = Read configure file ERROR: symbiosis-update 键值对为空
-    130 = 强制更新的版本号标志错误
-
-    192 = 保存的目标文件所在的目录不存在
+    重试返回的代码参考 retry.txt
 
     :param url: the link to download on Internet
     :param file_path: current directory if this param is None else use `file_path`
@@ -228,7 +201,7 @@ def download_api(url, file_path, headers):
         return 1
     except Exception as e:
         logger.error(f"Unexpected Error: {e.args}")
-        return 1
+        return 127
     else:
         logger.debug("ok")
     filesize = r.headers.get("content-length", -1)
@@ -286,8 +259,15 @@ def get_update():
     upgrade_json_fp = get_exec() + ".upgrade"
     upgrade_execute_fp = get_exec() + ".tmp"
     upgrade_old_execute_fp = get_exec() + ".old"
-    downgrade_sign = upgrade_config.get("downgrade_install", None)
     upgrade_content = []
+    logger.debug("检查 downgrade.json 文件")
+    if os.path.exists(get_resource("downgrade.json")):
+        with open(get_resource("downgrade.json"), "rb") as f:
+            downgrade_config = json.loads(f.read())
+    else:
+        logger.warning("找不到 downgrade.json 文件")
+        downgrade_config = dict()
+    downgrade_sign = downgrade_config.get("downgrade", None)
     logger.info("Downloading version of configure file. . .")
     exit_code = download(
         {"url": upgrade_config["json-url"], "filepath": upgrade_json_fp, "retry": retry, "timestamp": False})
@@ -341,10 +321,18 @@ def get_update():
         if downgrade_sign in head_json[up_list_key].keys():
             download({"url": head_json[up_list_key][downgrade_sign],
                      "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False})
+            if downgrade_config.get("permanent", False):
+                logger.debug("已清除一次性更新标志")
+                downgrade_config.update({"downgrade": None})
+            else:
+                logger.warning(
+                    "永久更新标志会在 Symbiosis 每次启动时都尝试一次降级更新，这可能会扰乱正常更新进度，除非你确定自己在干什么，否则请使用一次性更新标志（permanent=false）")
+            with open(get_resource("downgrade.json"), "wb") as f:
+                f.write(json.dumps(downgrade_config))
         else:
             logger.error(
                 f"强制更新标志应该是 {', '.join(head_json[up_list_key].keys())} 之一，而不是 {downgrade_sign}")
-            exit_code = 130
+            return 130
     else:
         for k, v in head_json[up_list_key].items():
             if decode_version(k) > decode_version(__version__) and k not in upgrade_config.get("specific_version_exclude", []):
@@ -359,35 +347,14 @@ def get_update():
                 pass
             download(
                 {"url": upgrade_content[0][1], "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False})
-            if os.path.exists(upgrade_old_execute_fp):
-                os.unlink(upgrade_old_execute_fp)
-            os.rename(get_exec(), upgrade_old_execute_fp)
-            os.rename(upgrade_execute_fp, get_exec())
         else:
             logger.info("暂无更新")
-    """head_json
-    {
-        "symbiosis-update-win": {
-            "v0.3": download url 0.3,
-            "v0.4": download url 0.4,
-            "v1.0": download url 1.0,
-            ...
-        },
-        "symbiosis-update-con": {
-            "v0.3": download url 0.3,
-            "v0.4": download url 0.4,
-            "v1.0": download url 1.0,
-            ...
-        },
-        "config-file-update: {
-            "2025.07.02.00.00.00": {
-                <config-file-entity>, // 此子字典中【不】含有 make-time 键值
-            }
-        }
-    }
-
-    """
-
+            return exit_code
+    if os.path.exists(upgrade_old_execute_fp):
+        logger.debug(f"移除旧版本程序 - {upgrade_old_execute_fp}")
+        os.unlink(upgrade_old_execute_fp)
+    os.rename(get_exec(), upgrade_old_execute_fp)
+    os.rename(upgrade_execute_fp, get_exec())
     # else:
     # json_0 = req.json()
     # for i in json_0["content"]:
@@ -445,65 +412,6 @@ fp = os.path.join(get_resource(args.cfgfile))
 with open(fp, "r", encoding="utf-8") as f:
     fr_json: dict = json.loads(f.read())
 globalsettings = fr_json.get("globalsettings", {})
-
-
-"""
-{
-    "execute": {
-        "1": {
-            "parameters": List[str] = ["p1", "p2", ...]
-            "exec": PathLike,
-            "uac_admin": bool,
-            "workdir": PathLike,
-            "disable": false
-            "datetime": "2000/1/1.."
-        },
-        "2": {
-            ...
-        },
-    },
-    "download": {
-        "t": {
-            "url": ...,
-            "filepath": ...,
-            "timestamp": bool, // false = 如果文件已存在，则覆盖该文件, true = 时间戳
-            "level": [0..4000], // 优先级，决定下载顺序
-            "headers": {
-                "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36,
-                "Connection": "close"
-            },
-            "retry": int,
-            /* 0 = 禁用此项下载
-            * 1 = 不重试
-            * n（n 为大于 1 的整数）最多 n - 1 次重试
-            * -1 = 无限重试
-            */
-            "keep": bool, // 下载完成后是否在配置文件中删除此下载项。
-            "expire": bool, // 此项不应由用户设定，表示是否成功下载过该任务。
-        },
-        ...
-    },
-    "upgrade": {
-        "json-url": "",
-        "config-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/cloud-config.json", // 实际上并未使用
-        "channel": ..., // 实际尚未使用
-        "retry": -1, // 此配置选项同时兼顾主程序和配置文件的更新。
-        "console": bool, // 下载控制台版本还是无窗口版本
-        "enable-config-update": true, // 此选项优先级高于 retry，但只决定配置文件的更新，主程序更新不受此影响。
-        "download": "", // 实际尚未使用
-        "specific_version_exclude": [], // 空序列表示接受所有更新，序列中的元素表示排除特定版本更新。
-        "downgrade_install": "v0.1" || null, // 强制降级安装, null 表示不启用降级安装，此选项无视 specific_version_exclude 的排除设置。
-    }
-    "run": {// 仍在可行性分析中},
-    "globalsettings": {
-        "retry": 1,
-        "uac_admin": false,
-        "keep": true,
-        "parameters": []
-        "disable": false, // 全局禁用，此方案不影响那些显式设置 disable 的元素
-    },
-}
-"""
 
 if __name__ == "__main__":
     logger.info(f"当前版本：{__version__}")
