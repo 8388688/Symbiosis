@@ -1,31 +1,3 @@
-"""
-1.2 更新：
-- 支持 exec 和 download 在特定时间段运行和下载
-- 修复时间戳缺省的问题
-- 日志文件现在以 “*.log” 结尾
-- 优化 disable 选项
-- download 下的小项可以自定义 headers
-1.1-release 紧急补丁：
-- 修正 1.0 以及更低版本无法正确判定版本号的 bug
-1.1 更新【破坏性更新】：
-- 完成静默更新
-- :art: 修正程序内部错误码
-- :sparkles: 现在配置文件也可以静默更新啦
-1.0 更新（【破坏性更新】不支持 0.4.0 以下的版本）
-- :sparkles: 静默更新(BETA)
-- 【破坏性更新】修整 config.json 格式
-- - 加入 download, upgrade 选项
-- - exec 选项可以用 disable 禁用
-0.4 更新：
-- 加入日志记录功能
-0.3.1 紧急更新：
-- 修复将全局设置项当成启动程序而读取出错 bug
-- 修复在出现参数错误时静默退出的 bug —— 现在会 print 出错的参数
-- 在一个版本之后，即 Symbiosis 0.4+, 将会记录日志
-0.3.0 更新：
-- 允许自定义配置文件路径（在 DOS 参数中设置）
-- 修复配置文件路径错误的 bug
-"""
 import argparse
 import logging.handlers
 import colorlog
@@ -43,7 +15,7 @@ from urllib3.exceptions import ProtocolError
 from requests.exceptions import SSLError, MissingSchema, ConnectionError, InvalidURL, InvalidSchema, RequestException
 # from typing import AnyStr
 
-__version__ = "v1.2"
+__version__ = "v1.2.1"
 
 
 def is_exec():
@@ -117,6 +89,17 @@ def decode_datetime(date_str: str):
     return time.mktime(time.strptime(
         date_str, "%Y/%m/%d"
     ))
+
+
+def combine_timestamp_fp(fp):
+    tmp = os.path.splitext(fp)
+    ch = 0
+    while os.path.exists(fp):
+        fp = tmp[0] + time.strftime(
+            ".%Y-%m-%d_%H.%M.%S",  # 前面的 “.” 不能省略
+            time.localtime(time.time())) + ("" if ch == 0 else f"_{ch}") + tmp[-1]
+        ch += 1
+    return fp
 
 
 def check_attributes(attr):
@@ -275,11 +258,8 @@ def download(config):
     filepath = config["filepath"]
     retry = config.get("retry", globalsettings.get("retry", 1))
     headers = config.get("headers", globalsettings.get("headers", {}))
-    if os.path.exists(config["filepath"]) and not config.get("replace-in-force", True):
-        tmp = os.path.splitext(filepath)
-        filepath = tmp[0] + time.strftime(
-            ".%Y-%m-%d_%H.%M.%S",  # 前面的 “.” 不能省略
-            time.localtime(time.time())) + tmp[-1]
+    if config.get("timestamp", False):
+        filepath = combine_timestamp_fp(filepath)
     cnt = 0
     status = 1
     time_ch = check_time_can_do(config)
@@ -310,7 +290,7 @@ def get_update():
     upgrade_content = []
     logger.info("Downloading version of configure file. . .")
     exit_code = download(
-        {"url": upgrade_config["json-url"], "filepath": upgrade_json_fp, "retry": retry, "replace-in=force": True})
+        {"url": upgrade_config["json-url"], "filepath": upgrade_json_fp, "retry": retry, "timestamp": False})
     if retry == 0:
         logger.info("更新已禁用")
         return 128
@@ -349,20 +329,24 @@ def get_update():
 
     upgrade_content = []
     #########################################################
-    if not head_json.get("symbiosis-update", []):
-        logger.error("Read configure file ERROR: symbiosis-update 键值对为空")
+    if upgrade_config.get("console", False):
+        up_list_key = "symbiosis-update-con"
+    else:
+        up_list_key = "symbiosis-update-win"
+    if not head_json.get(up_list_key, []):
+        logger.error(f"Read configure file ERROR: {up_list_key} 键值对为空")
         return 129
     if downgrade_sign is not None:
         logger.info(f"发现无视版本的强制更新标志，准备更新至 {downgrade_sign}")
-        if downgrade_sign in head_json["symbiosis-update"].keys():
-            download({"url": head_json["symbiosis-update"][downgrade_sign],
-                     "filepath": upgrade_execute_fp, "retry": retry, "replace-in=force": True})
+        if downgrade_sign in head_json[up_list_key].keys():
+            download({"url": head_json[up_list_key][downgrade_sign],
+                     "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False})
         else:
             logger.error(
-                f"强制更新标志应该是 {', '.join(head_json["symbiosis-update"].keys())} 之一，而不是 {downgrade_sign}")
+                f"强制更新标志应该是 {', '.join(head_json[up_list_key].keys())} 之一，而不是 {downgrade_sign}")
             exit_code = 130
     else:
-        for k, v in head_json["symbiosis-update"].items():
+        for k, v in head_json[up_list_key].items():
             if decode_version(k) > decode_version(__version__) and k not in upgrade_config.get("specific_version_exclude", []):
                 upgrade_content.append([k, v])
         upgrade_content.sort(key=lambda x: decode_version(x[0]), reverse=True)
@@ -374,7 +358,7 @@ def get_update():
             else:
                 pass
             download(
-                {"url": upgrade_content[0][1], "filepath": upgrade_execute_fp, "retry": retry, "replace-in=force": True})
+                {"url": upgrade_content[0][1], "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False})
             if os.path.exists(upgrade_old_execute_fp):
                 os.unlink(upgrade_old_execute_fp)
             os.rename(get_exec(), upgrade_old_execute_fp)
@@ -383,7 +367,13 @@ def get_update():
             logger.info("暂无更新")
     """head_json
     {
-        "symbiosis-update": {
+        "symbiosis-update-win": {
+            "v0.3": download url 0.3,
+            "v0.4": download url 0.4,
+            "v1.0": download url 1.0,
+            ...
+        },
+        "symbiosis-update-con": {
             "v0.3": download url 0.3,
             "v0.4": download url 0.4,
             "v1.0": download url 1.0,
@@ -476,7 +466,7 @@ globalsettings = fr_json.get("globalsettings", {})
         "t": {
             "url": ...,
             "filepath": ...,
-            "replace-in-force": bool, // true = 替换, false = rename
+            "timestamp": bool, // false = 如果文件已存在，则覆盖该文件, true = 时间戳
             "level": [0..4000], // 优先级，决定下载顺序
             "headers": {
                 "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36,
@@ -498,6 +488,7 @@ globalsettings = fr_json.get("globalsettings", {})
         "config-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/cloud-config.json", // 实际上并未使用
         "channel": ..., // 实际尚未使用
         "retry": -1, // 此配置选项同时兼顾主程序和配置文件的更新。
+        "console": bool, // 下载控制台版本还是无窗口版本
         "enable-config-update": true, // 此选项优先级高于 retry，但只决定配置文件的更新，主程序更新不受此影响。
         "download": "", // 实际尚未使用
         "specific_version_exclude": [], // 空序列表示接受所有更新，序列中的元素表示排除特定版本更新。
