@@ -27,11 +27,11 @@
     },
     "checksum-sha256-win": {
         "v1.2.2": "57b86a87d44aa7f9da242e00eae228c7dbeda4c0f01e30626cf511f17e866e73",
-        "v1.2.3": "9b1a972da7777a4e3f463951d62b7f5d52963e7e7f145e04024783cccb908b59"
+        "v1.2.3": "ee06226a6e9cba97e167fa103c7cd2bc43aab476ff956b160b800ec204515fa8"
     },
     "checksum-sha256-con": {
         "v1.2.2": "7b7d4c544c782ee0c9962d400785994a587799e373e6bc12a82fb17aa4ab1927",
-        "v1.2.3": "6b4b3a284ec69821c31b1afc7a15a354cdf4e3354d963bba6da82f085f6c838e"
+        "v1.2.3": "ad3863aa20ed090836cbf0f09ee5663f91e585b3d05dcc86fb64c9d333a3ee6d"
     },
     "config-file-update": {
         "2025.07.02.00.00.00": {

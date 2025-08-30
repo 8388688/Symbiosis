@@ -1,5 +1,6 @@
-# 1.2.3 更新：
+# 1.2.3 更新【LTS 支持】：
 - 下载时校验文件哈希值
+- 加入 --debug 参数调试选项
 
 # 1.2.2 更新【破坏性更新】：
 - 将 update 中的 downgrade_install 参数分离出来，单独成一个文件 downgrade.json

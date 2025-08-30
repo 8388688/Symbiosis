@@ -334,20 +334,22 @@ def get_update():
     if downgrade_sign is not None:
         logger.info(f"发现无视版本的强制更新标志，准备更新至 {downgrade_sign}")
         if downgrade_sign in head_json[up_list_key].keys():
-            while not os.path.exists(upgrade_execute_fp) or md5check(upgrade_execute_fp, "sha256", head_json[up_hash_key][downgrade_sign]):
+            while not os.path.exists(upgrade_execute_fp) or not md5check(upgrade_execute_fp, "sha256", head_json[up_hash_key][downgrade_sign]):
                 if os.path.exists(upgrade_execute_fp):
+                    logger.debug(
+                        f"{md5sum(upgrade_execute_fp, 'sha256')} != {head_json[up_hash_key][downgrade_sign]}")
                     logger.error(f"{upgrade_execute_fp} 文件哈希值校验不一致")
                 download({"url": head_json[up_list_key][downgrade_sign],
                          "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False})
             else:
                 logger.info("文件哈希校验一致")
-            if downgrade_config.get("permanent", False):
+            if not downgrade_config.get("permanent", False):
                 logger.debug("已清除一次性更新标志")
                 downgrade_config.update({"downgrade": None})
             else:
                 logger.warning(
                     "永久更新标志会在 Symbiosis 每次启动时都尝试一次降级更新，这可能会扰乱正常更新进度，除非你确定自己在干什么，否则请使用一次性更新标志（permanent=false）")
-            with open(get_resource("downgrade.json"), "wb") as f:
+            with open(get_resource("downgrade.json"), "w") as f:
                 f.write(json.dumps(downgrade_config))
         else:
             logger.error(
@@ -365,8 +367,10 @@ def get_update():
                 logger.info(f"将自动为您更新到最新版本 {upgrade_content[0][0]}")
             else:
                 pass
-            while not os.path.exists(upgrade_execute_fp) or md5check(upgrade_execute_fp, "sha256", head_json[up_hash_key][downgrade_sign]):
+            while not os.path.exists(upgrade_execute_fp) or not md5check(upgrade_execute_fp, "sha256", head_json[up_hash_key][upgrade_content[0][0]]):
                 if os.path.exists(upgrade_execute_fp):
+                    logger.debug(
+                        f"{md5sum(upgrade_execute_fp, 'sha256')} != {head_json[up_hash_key][upgrade_content[0][0]]}")
                     logger.error(f"{upgrade_execute_fp} 文件哈希值校验不一致")
                 download(
                     {"url": upgrade_content[0][1], "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False})
@@ -415,20 +419,24 @@ file_log.setFormatter(file_formatter)
 time_rotate_file = logging.handlers.TimedRotatingFileHandler(filename=get_resource(
     f"__SymbiosisLogs__\\time_rotate"), encoding="utf-8", when="D", interval=1)
 time_rotate_file.setFormatter(file_formatter)
-time_rotate_file.setLevel(logging.INFO)
+time_rotate_file.setLevel(logging.DEBUG)
 
 logger = colorlog.getLogger("Symbiosis")
 logger.addHandler(console)
 logger.addHandler(file_log)
 logger.addFilter(time_rotate_file)
-logger.setLevel(colorlog.INFO)
 console.close()
 file_log.close()
 time_rotate_file.close()
 
 params = argparse.ArgumentParser()
 params.add_argument("cfgfile", nargs="?", default="config.json")
+params.add_argument("--debug", action="store_true")
 args, unknown = params.parse_known_args()
+if args.debug:
+    logger.setLevel(colorlog.DEBUG)
+else:
+    logger.setLevel(colorlog.INFO)
 if unknown:
     logger.warning(f"未知参数: {unknown}")
 else:
