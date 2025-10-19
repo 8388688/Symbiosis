@@ -15,7 +15,8 @@
         "v1.2.1": "https://github.com/8388688/Symbiosis/releases/download/v1.2.1/Symbiosis.exe",
         "v1.2.2": "https://github.com/8388688/Symbiosis/releases/download/v1.2.2/Symbiosis.exe",
         "v1.2.3": "https://github.com/8388688/Symbiosis/releases/download/v1.2.3/Symbiosis.exe",
-        "v1.2.4": "https://github.com/8388688/Symbiosis/releases/download/v1.2.4/Symbiosis.exe"
+        "v1.2.4": "https://github.com/8388688/Symbiosis/releases/download/v1.2.4/Symbiosis.exe",
+        "v1.3": "https://github.com/8388688/Symbiosis/releases/download/v1.3/Symbiosis.exe"
     },
     "symbiosis-update-con": {
         "v0.3.0": "https://github.com/8388688/Symbiosis/releases/download/v0.3.0/Symbiosis_console.exe",
@@ -25,17 +26,20 @@
         "v1.2.1": "https://github.com/8388688/Symbiosis/releases/download/v1.2.1/Symbiosis_console.exe",
         "v1.2.2": "https://github.com/8388688/Symbiosis/releases/download/v1.2.2/Symbiosis_console.exe",
         "v1.2.3": "https://github.com/8388688/Symbiosis/releases/download/v1.2.3/Symbiosis_console.exe",
-        "v1.2.4": "https://github.com/8388688/Symbiosis/releases/download/v1.2.4/Symbiosis_console.exe"
+        "v1.2.4": "https://github.com/8388688/Symbiosis/releases/download/v1.2.4/Symbiosis_console.exe",
+        "v1.3": "https://github.com/8388688/Symbiosis/releases/download/v1.3/Symbiosis_console.exe"
     },
     "checksum-sha256-win": {
         "v1.2.2": "57b86a87d44aa7f9da242e00eae228c7dbeda4c0f01e30626cf511f17e866e73",
         "v1.2.3": "ee06226a6e9cba97e167fa103c7cd2bc43aab476ff956b160b800ec204515fa8",
-        "v1.2.4": "97bd186e6acbdd09bfa24c40c88a10350459ddd677463cf567360e01d13a8d0e"
+        "v1.2.4": "97bd186e6acbdd09bfa24c40c88a10350459ddd677463cf567360e01d13a8d0e",
+        "v1.3": "0ed3cf07ace33e1830641e7a184a7c52118a0382e2385adbd7ba018f8700fdb6"
     },
     "checksum-sha256-con": {
         "v1.2.2": "7b7d4c544c782ee0c9962d400785994a587799e373e6bc12a82fb17aa4ab1927",
         "v1.2.3": "ad3863aa20ed090836cbf0f09ee5663f91e585b3d05dcc86fb64c9d333a3ee6d",
-        "v1.2.4": "78b5a94df309333024d128b9a03dc53a96a77b5c5d8b2bd354f91c575ac75ce4"
+        "v1.2.4": "78b5a94df309333024d128b9a03dc53a96a77b5c5d8b2bd354f91c575ac75ce4",
+        "v1.3": "1cf7945adbd421a6a4a1e38f82434fbc62f46bcf854318a7e2eeb0951a713915"
     },
     "config-file-update": {
         "2025.07.02.00.00.00": {

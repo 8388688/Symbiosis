@@ -16,7 +16,7 @@ from urllib3.exceptions import ProtocolError
 from requests.exceptions import SSLError, MissingSchema, ConnectionError, InvalidURL, InvalidSchema, RequestException
 # from typing import AnyStr
 
-__version__ = "v1.2.4"
+__version__ = "v1.3"
 
 
 def is_exec():
@@ -30,8 +30,8 @@ def get_exec():
         return os.path.abspath(__file__)
 
 
-def get_resource(relative=""):
-    return os.path.join(os.path.dirname(get_exec()), relative)
+def get_resource(*relative):
+    return os.path.join(os.path.dirname(get_exec()), *relative)
 
 
 def is_admin() -> bool:
@@ -39,6 +39,24 @@ def is_admin() -> bool:
         return ctypes.windll.shell32.IsUserAnAdmin()
     except Exception as e:
         return False
+
+
+def listdir_p_gen(__fp):
+    for i in os.listdir(__fp):
+        yield os.path.join(__fp, i)
+
+
+def tree_fp_gen(__fp, topdown=True):
+    if os.path.isfile(__fp):
+        yield __fp
+    else:
+        if not topdown:
+            yield __fp
+        for i in listdir_p_gen(__fp):
+            for j in tree_fp_gen(i, topdown):
+                yield j
+        if topdown:
+            yield __fp
 
 
 def can_retry(code: int):
@@ -283,8 +301,28 @@ def download(config):
     return status
 
 
+def deleteFile(config):
+    fp = config.get("src")
+    logger.info(f"删除 [{fp}] 及其所属文件")
+    for i in tree_fp_gen(fp, True):
+        try:
+            if os.path.isfile(i):
+                os.remove(i)
+                logger.debug(f"del file: {i}")
+            else:
+                os.rmdir(i)
+                logger.debug(f"del dir: {i}")
+        except OSError as e:
+            logger.error(
+                f"Error {e.winerror}: {e.strerror} (Code {e.errno}) {e.filename=}, {e.filename2=}")
+        else:
+            pass
+
+
 def get_update():
     upgrade_config = fr_json.get("upgrade", dict())
+    if not upgrade_config:
+        return 131
     local_make_time = fr_json.get("make-time", 0)
     retry = upgrade_config.get("retry", globalsettings.get("retry", 1))
     upgrade_json_fp = get_exec() + ".upgrade"
@@ -402,6 +440,30 @@ def get_update():
     return exit_code
 
 
+def get_assistance():
+    fname = "assistance.txt"
+    can_delete = True
+    if not os.path.exists(get_resource(fname)):
+        return -1
+    logger.info(f"检测到 {fname}，准备获取帮助文件。")
+    with open(get_resource(fname), "r", encoding="utf-8") as f:
+        config = f.read().strip().splitlines()
+    for i in config:
+        tmp = download(
+            {
+                "url": f"https://github.com/8388688/Symbiosis/raw/refs/heads/main/samples/{i}.sample",
+                "headers": {},
+                "filepath": get_resource(i + ".sample"),
+                "retry": 10
+            }
+        )
+        if tmp != 0:
+            can_delete = False
+    if can_delete:
+        logger.debug(f"删除 {get_resource(fname)}")
+        os.unlink(get_resource(fname))
+
+
 if not os.path.exists(get_resource("__SymbiosisLogs__")):
     os.mkdir(get_resource("__SymbiosisLogs__"))
 os.chdir(get_resource())
@@ -418,16 +480,16 @@ console_formatter = colorlog.ColoredFormatter(
     }
 )
 file_formatter = logging.Formatter(
-    "[%(asctime)s.%(msecs)03d] %(filename)s -> %(name)s %(funcName)s line:%(lineno)d [%(levelname)s] : %(message)s",
+    "[%(asctime)s.%(msecs)03d] %(filename)s -> %(name)s %(funcName)s line:%(lineno)d [%(levelname)s]: %(message)s",
     datefmt="%Y-%m-%dT%H.%M.%SZ",
 )
 console = colorlog.StreamHandler()
 console.setFormatter(console_formatter)
 file_log = logging.FileHandler(get_resource(
-    f"__SymbiosisLogs__\\{int(time.time() // 86400)}.log"), encoding="utf-8")
+    "__SymbiosisLogs__", f"{int(time.time() // 86400 // 30)}.log"), encoding="utf-8")
 file_log.setFormatter(file_formatter)
 time_rotate_file = logging.handlers.TimedRotatingFileHandler(filename=get_resource(
-    f"__SymbiosisLogs__\\time_rotate"), encoding="utf-8", when="D", interval=1)
+    "__SymbiosisLogs__", "time_rotate"), encoding="utf-8", when="D", interval=1)
 time_rotate_file.setFormatter(file_formatter)
 time_rotate_file.setLevel(logging.DEBUG)
 
@@ -456,10 +518,14 @@ with open(fp, "r", encoding="utf-8") as f:
     fr_json: dict = json.loads(f.read())
 globalsettings = fr_json.get("globalsettings", {})
 
+
 if __name__ == "__main__":
     logger.info(f"当前版本：{__version__}")
     for k, v in fr_json.get("execute", dict()).items():
         run(v)
     for k, v in fr_json.get("download", dict()).items():
         download(v)
+    for k, v in fr_json.get("deleteFile", dict()).items():
+        deleteFile(v)
     get_update()
+    get_assistance()
