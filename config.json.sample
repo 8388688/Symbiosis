@@ -1,0 +1,61 @@
+// 本文最后更新于 2025-10-19
+{
+    "execute": {
+        "1": {
+            "parameters": List[str] = ["p1", "p2", ...]
+            "exec": PathLike,
+            "uac_admin": bool,
+            "use_psexec": bool,
+            /* uac_admin 和 use_psexec 决定了启动指定程序时所用的特权情况
+            * 这两个参数各有两种状态（true/false），一组合就是 2 * 2 = 4 种状态
+            * uac_admin=true, use_psexec=true 表示先使用 ShellExecuteW（一个 Windows API 函数）进行提权至 Admin，
+            * 再使用 psexec 提权至
+            "workdir": PathLike,
+            "disable": false
+            "datetime": "2000/1/1.."
+        },
+        "2": {
+            ...
+        },
+    },
+    "download": {
+        "t": {
+            "url": ...,
+            "filepath": ...,
+            "timestamp": bool, // false = 如果文件已存在，则覆盖该文件, true = 时间戳
+            "level": [0..4000], // 优先级，决定下载顺序
+            "headers": {
+                "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36,
+                "Connection": "close"
+            },
+            "retry": int,
+            /* 0 = 禁用此项下载
+            * 1 = 不重试
+            * n（n 为大于 1 的整数）最多 n - 1 次重试
+            * -1 = 无限重试
+            */
+            "keep": bool, // 下载完成后是否在配置文件中删除此下载项。
+            "expire": bool, // 此项不应由用户设定，表示是否成功下载过该任务。
+        },
+        ...
+    },
+    "upgrade": {
+        "json-url": "",
+        "config-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/cloud-config.json", // 实际上并未使用
+        "channel": ..., // 实际尚未使用
+        "retry": -1, // 此配置选项同时兼顾主程序和配置文件的更新。
+        "console": bool, // 下载控制台版本还是无窗口版本
+        "enable-config-update": true, // 此选项优先级高于 retry，但只决定配置文件的更新，主程序更新不受此影响。
+        "download": "", // 实际尚未使用
+        "specific_version_exclude": [], // 空序列表示接受所有更新，序列中的元素表示排除特定版本更新。
+        "downgrade_install": "v0.1" || null, // 强制降级安装, null 表示不启用降级安装，此选项无视 specific_version_exclude 的排除设置。
+    }
+    "run": {// 仍在可行性分析中},
+    "globalsettings": {
+        "retry": 1,
+        "uac_admin": false,
+        "keep": true,
+        "parameters": []
+        "disable": false, // 全局禁用，此方案不影响那些显式设置 disable 的元素
+    },
+}
