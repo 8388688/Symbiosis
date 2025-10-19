@@ -16,7 +16,7 @@ from urllib3.exceptions import ProtocolError
 from requests.exceptions import SSLError, MissingSchema, ConnectionError, InvalidURL, InvalidSchema, RequestException
 # from typing import AnyStr
 
-__version__ = "v1.2.3"
+__version__ = "v1.2.4"
 
 
 def is_exec():
@@ -129,8 +129,14 @@ def md5sum(fpath: str, algorithm: str, buffering: int = 8096) -> str:
         return result.hexdigest()
 
 
-def md5check(fpath, algorithm, expected_hash):
-    return md5sum(fpath, algorithm).lower() == expected_hash.lower()
+def md5check(fpath, algorithm, expected_hash) -> bool:
+    result = md5sum(fpath, algorithm).lower()
+    if result == expected_hash.lower():
+        return True
+    else:
+        logger.error(
+            f"校验失败，文件的 {algorithm} 哈希应为 {expected_hash}，实际上却是 {result}")
+        return False
 
 
 def run(config: dict):
@@ -164,11 +170,11 @@ def run(config: dict):
     # sys.exit(0)
 
 
-def download_api(url, file_path, headers):
+def download_api(url, file_path, headers, checksum: dict = dict()):
     """a simple download script
 
     download file on Internet in silence
-    重试返回的代码参考 retry.txt
+    重试返回的代码参考 retry.md
 
     :param url: the link to download on Internet
     :param file_path: current directory if this param is None else use `file_path`
@@ -226,13 +232,24 @@ def download_api(url, file_path, headers):
     logger.info(f"校验: url: {url}, 大小: {filesize}")
     logger.debug(f"当前 UA: {headers.get('User-Agent', '<空>')}")
     if filesize >= 32 * 1024 * 1024:
-        logger.warning("这个文件太大了，下载可能需要很长的时间。")
+        logger.warning(f"这个文件太大了 ({filesize} Bytes)，下载可能需要很长的时间。")
 
     st = time.time()
     with open(file_path, "wb") as f:
         for i in r.iter_content(chunk_size=16384):
             f.write(i)
     el = time.time() - st
+    if checksum:
+        logger.info("校验文件中. . .")
+        for k, v in checksum.items():
+            logger.debug(f"校验文件的 {k} 值")
+            if not md5check(file_path, k, v):
+                return 12
+            else:
+                logger.debug(f"文件的 {k} 哈希校验无误")
+        else:
+            logger.info("文件哈希校验无误")
+
     logger.info(
         f"Download complete, time used: {el:.2f}s, average speed: {f'{filesize / el:.2f}B/s' if filesize != -1 and el != 0 else "?"}.")
     return 0
@@ -244,6 +261,7 @@ def download(config):
     filepath = config["filepath"]
     retry = config.get("retry", globalsettings.get("retry", 1))
     headers = config.get("headers", globalsettings.get("headers", {}))
+    checksum = config.get("checksum", {})
     if config.get("timestamp", False):
         filepath = combine_timestamp_fp(filepath)
     cnt = 0
@@ -251,10 +269,10 @@ def download(config):
     time_ch = check_time_can_do(config)
     if time_ch[1]:
         while not (0 <= retry - cnt < 1):
-            status = download_api(url, filepath, headers)
+            status = download_api(url, filepath, headers, checksum)
             if can_retry(status):
                 cnt += 1
-                logger.info(
+                logger.warning(
                     f"Download failed, still trying... ({cnt}/{retry if retry >= 0 else 'Infinity'})")
             else:
                 break
@@ -285,7 +303,7 @@ def get_update():
     exit_code = download(
         {"url": upgrade_config["json-url"], "filepath": upgrade_json_fp, "retry": retry, "timestamp": False})
     if retry == 0:
-        logger.info("更新已禁用")
+        logger.info("Self-upgrade is disabled.")
         return 128
     if exit_code != 0:
         logger.error(
@@ -335,10 +353,6 @@ def get_update():
         logger.info(f"发现无视版本的强制更新标志，准备更新至 {downgrade_sign}")
         if downgrade_sign in head_json[up_list_key].keys():
             while not os.path.exists(upgrade_execute_fp) or not md5check(upgrade_execute_fp, "sha256", head_json[up_hash_key][downgrade_sign]):
-                if os.path.exists(upgrade_execute_fp):
-                    logger.debug(
-                        f"{md5sum(upgrade_execute_fp, 'sha256')} != {head_json[up_hash_key][downgrade_sign]}")
-                    logger.error(f"{upgrade_execute_fp} 文件哈希值校验不一致")
                 download({"url": head_json[up_list_key][downgrade_sign],
                          "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False})
             else:
@@ -368,10 +382,6 @@ def get_update():
             else:
                 pass
             while not os.path.exists(upgrade_execute_fp) or not md5check(upgrade_execute_fp, "sha256", head_json[up_hash_key][upgrade_content[0][0]]):
-                if os.path.exists(upgrade_execute_fp):
-                    logger.debug(
-                        f"{md5sum(upgrade_execute_fp, 'sha256')} != {head_json[up_hash_key][upgrade_content[0][0]]}")
-                    logger.error(f"{upgrade_execute_fp} 文件哈希值校验不一致")
                 download(
                     {"url": upgrade_content[0][1], "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False})
             else:
