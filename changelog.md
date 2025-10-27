@@ -1,3 +1,17 @@
+# 1.3.1 更新：
+此更新影响 config.json 主配置文件中的 exec 和 download 键值对
+- Fixed: deleteFile 部分优化
+- Added: use_psexec(in "exec")
+- Added: ignore_status(in "download")
+- Modified: sample 帮助文件现在整合进二进制中而不是联网获取
+
+# 1.3 更新：
+- Fixed: 当配置文件 upgrade 项为空的时候，将会因检查更新失败而异常退出
+- Added: deleteFile
+
+# 1.2.4 更新【LTS 支持】：
+- 下载时校验文件哈希值
+
 # 1.2.3 更新【LTS 支持】：
 - 下载时校验文件哈希值
 - 加入 --debug 参数调试选项

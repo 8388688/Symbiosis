@@ -2,6 +2,7 @@ import argparse
 import colorlog
 import ctypes
 import hashlib
+import platform
 import json
 import logging
 import logging.handlers
@@ -16,11 +17,17 @@ from urllib3.exceptions import ProtocolError
 from requests.exceptions import SSLError, MissingSchema, ConnectionError, InvalidURL, InvalidSchema, RequestException
 # from typing import AnyStr
 
-__version__ = "v1.3"
+__version__ = "v1.3.1"
+K_UPDATE_CONFIG_UNDER_CONSTRUCTION = True
 
 
 def is_exec():
     return hasattr(sys, "_MEIPASS")
+
+
+def get_orig_path():
+    # 获取脚本的【py文件】所在路径
+    return os.path.dirname(os.path.abspath(__file__))
 
 
 def get_exec():
@@ -30,8 +37,11 @@ def get_exec():
         return os.path.abspath(__file__)
 
 
-def get_resource(*relative):
+def resource_path(*relative):
     return os.path.join(os.path.dirname(get_exec()), *relative)
+
+
+get_resource = resource_path
 
 
 def is_admin() -> bool:
@@ -39,6 +49,14 @@ def is_admin() -> bool:
         return ctypes.windll.shell32.IsUserAnAdmin()
     except Exception as e:
         return False
+
+
+def getOSbit():
+    return platform.architecture()
+
+
+def is64bitPlatform() -> bool:
+    return getOSbit()[0].lower() == "64bit"
 
 
 def listdir_p_gen(__fp):
@@ -162,9 +180,10 @@ def run(config: dict):
     exec_fp: PathLike = config.get("exec")
     parameters_orig: list[str] = config.get(
         "parameters", globalsettings.get("parameters", []))
-    parameters: str = " ".join((str(i) for i in parameters_orig))
     uac_admin: bool = config.get(
         "uac_admin", globalsettings.get("uac_admin", False))
+    use_psexec: bool = config.get(
+        "use_psexec", globalsettings.get("use_psexec", False))
     workdir: PathLike = config.get(
         "workdir", globalsettings.get("work_dir", os.getcwd()))
     fake: bool = config.get("disable", globalsettings.get("disable", False))
@@ -172,23 +191,35 @@ def run(config: dict):
     #     logger.info(f"正在使用管理员权限运行 - 非常棒！")
     # else:
     #     logger.info(f"准备以管理员身份重启. . . . . .")
+    psexec_fp = resource_path(
+        "scripts", "PsExec64.exe" if is64bitPlatform() else "PsExec.exe")
+    psexec_fp_exists = True
+    if not os.path.exists(psexec_fp):
+        logger.warning(f"{psexec_fp} 路径不存在，{use_psexec=} 实际成为无效设置。")
+        psexec_fp_exists = False
     if not fake:
         if exec_fp is None:
             logger.error(f"键值对 exec 为必填")
             return 128
         if time_ch[1]:
             logger.info(
-                f"启动: {exec_fp=}, {parameters_orig=}, {uac_admin=}, {workdir=}")
-            ctypes.windll.shell32.ShellExecuteW(
-                None, "runas" if uac_admin else "open", exec_fp, parameters, workdir, 1)
+                f"启动: {exec_fp=}, {parameters_orig=}, {uac_admin=}, {workdir=}, {use_psexec=}")
+            if use_psexec and psexec_fp_exists:
+                parameters: str = f"-d -i {'-s' if uac_admin else '-l'} -w {workdir} -accepteula -nobanner {exec_fp} " + \
+                    " ".join((str(i) for i in parameters_orig))
+                ctypes.windll.shell32.ShellExecuteW(
+                    None, "runas" if uac_admin else "open", psexec_fp, parameters, workdir, 1)
+            else:
+                parameters: str = " ".join((str(i) for i in parameters_orig))
+                ctypes.windll.shell32.ShellExecuteW(
+                    None, "runas" if uac_admin else "open", exec_fp, parameters, workdir, 1)
         else:
             logger.info(f"启动时间不在 {time_ch[0]} 范围内")
     else:
         logger.info(f"假装启动: {exec_fp=}")
-    # sys.exit(0)
 
 
-def download_api(url, file_path, headers, checksum: dict = dict()):
+def download_api(url, file_path, headers, checksum: dict = dict(), ignore_status=False):
     """a simple download script
 
     download file on Internet in silence
@@ -249,8 +280,11 @@ def download_api(url, file_path, headers, checksum: dict = dict()):
 
     logger.info(f"校验: url: {url}, 大小: {filesize}")
     logger.debug(f"当前 UA: {headers.get('User-Agent', '<空>')}")
-    if filesize >= 32 * 1024 * 1024:
-        logger.warning(f"这个文件太大了 ({filesize} Bytes)，下载可能需要很长的时间。")
+    if ignore_status or r.status_code == 200:
+        pass
+    else:
+        logger.warning(f"Error downloading file: {r.status_code=}")
+        return 13
 
     st = time.time()
     with open(file_path, "wb") as f:
@@ -280,6 +314,8 @@ def download(config):
     retry = config.get("retry", globalsettings.get("retry", 1))
     headers = config.get("headers", globalsettings.get("headers", {}))
     checksum = config.get("checksum", {})
+    ignore_status = config.get(
+        "ignore_status", globalsettings.get("ignore_status", False))
     if config.get("timestamp", False):
         filepath = combine_timestamp_fp(filepath)
     cnt = 0
@@ -287,7 +323,8 @@ def download(config):
     time_ch = check_time_can_do(config)
     if time_ch[1]:
         while not (0 <= retry - cnt < 1):
-            status = download_api(url, filepath, headers, checksum)
+            status = download_api(
+                url, filepath, headers, checksum, ignore_status)
             if can_retry(status):
                 cnt += 1
                 logger.warning(
@@ -304,19 +341,37 @@ def download(config):
 def deleteFile(config):
     fp = config.get("src")
     logger.info(f"删除 [{fp}] 及其所属文件")
+    tot_file, tot_dir, tot_size = 0, 0, 0
+    exclude_dirs = []
+    if not os.path.exists(fp):
+        logger.error(f"{fp} - 文件不存在")
+        return
     for i in tree_fp_gen(fp, True):
         try:
+            if i in exclude_dirs:
+                logger.debug(f"skip: {i}")
+                continue
             if os.path.isfile(i):
+                tmp = os.path.getsize(i)
                 os.remove(i)
                 logger.debug(f"del file: {i}")
+                tot_size += tmp
+                tot_file += 1
             else:
                 os.rmdir(i)
                 logger.debug(f"del dir: {i}")
+                tot_dir += 1
         except OSError as e:
-            logger.error(
-                f"Error {e.winerror}: {e.strerror} (Code {e.errno}) {e.filename=}, {e.filename2=}")
+            logger.warning(
+                f"Delete failed, error {e.winerror}: {e.strerror} (Code {e.errno}) {e.filename=}, {e.filename2=}.")
+            tmp = i
+            while os.path.normpath(tmp) == os.path.normpath(fp):
+                tmp = os.path.dirname(tmp)
+                exclude_dirs.append(tmp)
         else:
             pass
+    else:
+        logger.info(f"总计删除 {tot_size} 字节，{tot_file} 个文件，{tot_dir} 个文件夹。")
 
 
 def get_update():
@@ -364,10 +419,8 @@ def get_update():
         if upgrade_content:
             if len(upgrade_content) > 1:
                 logger.info(
-                    f"检查到多个配置文件的累积更新，{", ".join([i[0] for i in upgrade_content])}")
-                logger.info(f"将自动为您更新到最新的一个版本 {upgrade_content[0][0]}")
-            else:
-                pass
+                    f"检查到多个配置文件的累积更新，{", ".join([i[0] for i in upgrade_content])}。"
+                    f"将自动为您更新到最新的一个版本 {upgrade_content[0][0]}")
             upgrade_content[0][1].update({"make-time": k})
             with open(get_resource(args.cfgfile), "w", encoding="utf-8") as f:
                 f.write(json.dumps(upgrade_content[0][1]))
@@ -390,17 +443,18 @@ def get_update():
     if downgrade_sign is not None:
         logger.info(f"发现无视版本的强制更新标志，准备更新至 {downgrade_sign}")
         if downgrade_sign in head_json[up_list_key].keys():
-            while not os.path.exists(upgrade_execute_fp) or not md5check(upgrade_execute_fp, "sha256", head_json[up_hash_key][downgrade_sign]):
-                download({"url": head_json[up_list_key][downgrade_sign],
-                         "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False})
-            else:
-                logger.info("文件哈希校验一致")
+            download(
+                {"url": head_json[up_list_key][downgrade_sign],
+                 "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False,
+                 "checksum": {"sha256": head_json[up_hash_key][downgrade_sign]}})
             if not downgrade_config.get("permanent", False):
                 logger.debug("已清除一次性更新标志")
                 downgrade_config.update({"downgrade": None})
             else:
                 logger.warning(
-                    "永久更新标志会在 Symbiosis 每次启动时都尝试一次降级更新，这可能会扰乱正常更新进度，除非你确定自己在干什么，否则请使用一次性更新标志（permanent=false）")
+                    "永久更新标志会在 Symbiosis 每次启动时都尝试一次降级更新，"
+                    "这可能会扰乱正常更新进度，"
+                    "除非你确定自己在干什么，否则请使用一次性更新标志（permanent=false）")
             with open(get_resource("downgrade.json"), "w") as f:
                 f.write(json.dumps(downgrade_config))
         else:
@@ -415,15 +469,12 @@ def get_update():
         if upgrade_content:
             if len(upgrade_content) > 1:
                 logger.info(
-                    f"检查到多个版本的累积更新: {', '.join([i[0] for i in upgrade_content])}")
-                logger.info(f"将自动为您更新到最新版本 {upgrade_content[0][0]}")
-            else:
-                pass
-            while not os.path.exists(upgrade_execute_fp) or not md5check(upgrade_execute_fp, "sha256", head_json[up_hash_key][upgrade_content[0][0]]):
-                download(
-                    {"url": upgrade_content[0][1], "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False})
-            else:
-                logger.info("文件哈希校验一致")
+                    f"检查到多个版本的累积更新: {', '.join([i[0] for i in upgrade_content])}。"
+                    f"将自动为您更新到最新版本 {upgrade_content[0][0]}")
+            download(
+                {"url": upgrade_content[0][1], "filepath": upgrade_execute_fp,
+                 "retry": retry, "timestamp": False,
+                 "checksum": {"sha256": head_json[up_hash_key][upgrade_content[0][0]]}})
         else:
             logger.info("暂无更新")
             return exit_code
@@ -449,16 +500,24 @@ def get_assistance():
     with open(get_resource(fname), "r", encoding="utf-8") as f:
         config = f.read().strip().splitlines()
     for i in config:
-        tmp = download(
-            {
-                "url": f"https://github.com/8388688/Symbiosis/raw/refs/heads/main/samples/{i}.sample",
-                "headers": {},
-                "filepath": get_resource(i + ".sample"),
-                "retry": 10
-            }
-        )
-        if tmp != 0:
+        # tmp = download(
+        #     {
+        #         "url": f"https://github.com/8388688/Symbiosis/raw/refs/heads/main/samples/{i}.sample",
+        #         "headers": {},
+        #         "filepath": get_resource(i + ".sample"),
+        #         "retry": 10
+        #     }
+        # )
+        tmp_fp = os.path.join(get_orig_path(), "samples", i + ".sample")
+        dst_fp = resource_path(i + ".sample.txt")
+        if not os.path.exists(tmp_fp):
+            logger.warning(f"{tmp_fp} not found.")
             can_delete = False
+        else:
+            logger.info(f"Extract: {tmp_fp} -> {dst_fp}")
+            with open(tmp_fp, "rb") as f:
+                with open(dst_fp, "wb") as f2:
+                    f2.write(f.read())
     if can_delete:
         logger.debug(f"删除 {get_resource(fname)}")
         os.unlink(get_resource(fname))
@@ -523,9 +582,9 @@ if __name__ == "__main__":
     logger.info(f"当前版本：{__version__}")
     for k, v in fr_json.get("execute", dict()).items():
         run(v)
-    for k, v in fr_json.get("download", dict()).items():
-        download(v)
     for k, v in fr_json.get("deleteFile", dict()).items():
         deleteFile(v)
+    for k, v in fr_json.get("download", dict()).items():
+        download(v)
     get_update()
     get_assistance()
