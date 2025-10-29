@@ -17,7 +17,7 @@ from urllib3.exceptions import ProtocolError
 from requests.exceptions import SSLError, MissingSchema, ConnectionError, InvalidURL, InvalidSchema, RequestException
 # from typing import AnyStr
 
-__version__ = "v1.3.1"
+__version__ = "v1.3.2"
 K_UPDATE_CONFIG_UNDER_CONSTRUCTION = True
 
 
@@ -64,16 +64,16 @@ def listdir_p_gen(__fp):
         yield os.path.join(__fp, i)
 
 
-def tree_fp_gen(__fp, topdown=True):
+def tree_fp_gen(__fp, folders, topdown=True):
     if os.path.isfile(__fp):
         yield __fp
     else:
-        if not topdown:
+        if folders and not topdown:
             yield __fp
         for i in listdir_p_gen(__fp):
-            for j in tree_fp_gen(i, topdown):
+            for j in tree_fp_gen(i, folders, topdown):
                 yield j
-        if topdown:
+        if folders and topdown:
             yield __fp
 
 
@@ -194,7 +194,7 @@ def run(config: dict):
     psexec_fp = resource_path(
         "scripts", "PsExec64.exe" if is64bitPlatform() else "PsExec.exe")
     psexec_fp_exists = True
-    if not os.path.exists(psexec_fp):
+    if not os.path.exists(psexec_fp) and "use_psexec" in config.get():
         logger.warning(f"{psexec_fp} 路径不存在，{use_psexec=} 实际成为无效设置。")
         psexec_fp_exists = False
     if not fake:
@@ -207,12 +207,13 @@ def run(config: dict):
             if use_psexec and psexec_fp_exists:
                 parameters: str = f"-d -i {'-s' if uac_admin else '-l'} -w {workdir} -accepteula -nobanner {exec_fp} " + \
                     " ".join((str(i) for i in parameters_orig))
-                ctypes.windll.shell32.ShellExecuteW(
+                exit_code = ctypes.windll.shell32.ShellExecuteW(
                     None, "runas" if uac_admin else "open", psexec_fp, parameters, workdir, 1)
             else:
                 parameters: str = " ".join((str(i) for i in parameters_orig))
-                ctypes.windll.shell32.ShellExecuteW(
+                exit_code = ctypes.windll.shell32.ShellExecuteW(
                     None, "runas" if uac_admin else "open", exec_fp, parameters, workdir, 1)
+            logger.info(f"启动完成（不一定启动成功），返回状态码为 {exit_code}")
         else:
             logger.info(f"启动时间不在 {time_ch[0]} 范围内")
     else:
@@ -340,13 +341,16 @@ def download(config):
 
 def deleteFile(config):
     fp = config.get("src")
+    del_folder = config.get("folders", globalsettings.get("folders", False))
+    only_subfolder = config.get(
+        "only_subfolders", globalsettings.get("only_subfolders", False))
     logger.info(f"删除 [{fp}] 及其所属文件")
     tot_file, tot_dir, tot_size = 0, 0, 0
     exclude_dirs = []
     if not os.path.exists(fp):
         logger.error(f"{fp} - 文件不存在")
         return
-    for i in tree_fp_gen(fp, True):
+    for i in tree_fp_gen(fp, del_folder, True):
         try:
             if i in exclude_dirs:
                 logger.debug(f"skip: {i}")
@@ -358,9 +362,10 @@ def deleteFile(config):
                 tot_size += tmp
                 tot_file += 1
             else:
-                os.rmdir(i)
-                logger.debug(f"del dir: {i}")
-                tot_dir += 1
+                if not only_subfolder or i != fp:
+                    os.rmdir(i)
+                    logger.debug(f"del dir: {i}")
+                    tot_dir += 1
         except OSError as e:
             logger.warning(
                 f"Delete failed, error {e.winerror}: {e.strerror} (Code {e.errno}) {e.filename=}, {e.filename2=}.")
@@ -384,6 +389,9 @@ def get_update():
     upgrade_execute_fp = get_exec() + ".tmp"
     upgrade_old_execute_fp = get_exec() + ".old"
     upgrade_content = []
+    if retry == 0:
+        logger.info("Self-upgrade is disabled.")
+        return 128
     logger.debug("检查 downgrade.json 文件")
     if os.path.exists(get_resource("downgrade.json")):
         with open(get_resource("downgrade.json"), "rb") as f:
@@ -395,9 +403,6 @@ def get_update():
     logger.info("Downloading version of configure file. . .")
     exit_code = download(
         {"url": upgrade_config["json-url"], "filepath": upgrade_json_fp, "retry": retry, "timestamp": False})
-    if retry == 0:
-        logger.info("Self-upgrade is disabled.")
-        return 128
     if exit_code != 0:
         logger.error(
             f"Cannot download version of configure file (Error {exit_code})")
@@ -407,27 +412,30 @@ def get_update():
         head_json = json.loads(f.read())
     if os.path.exists(upgrade_json_fp):
         os.unlink(upgrade_json_fp)
-    if upgrade_config.get("enable-config-update", False):
-        for k, v in head_json.get("config-file-update", dict()).items():
-            if local_make_time == 0:
-                logger.warning(
-                    f"make-time 键值对未设置，Symbiosis 将默认为您填入缺省参数 {local_make_time}")
-            if decode_config_time_version(k) > decode_config_time_version(local_make_time):
-                upgrade_content.append([k, v])
-        upgrade_content.sort(
-            key=lambda x: decode_config_time_version(x[0]), reverse=True)
-        if upgrade_content:
-            if len(upgrade_content) > 1:
-                logger.info(
-                    f"检查到多个配置文件的累积更新，{", ".join([i[0] for i in upgrade_content])}。"
-                    f"将自动为您更新到最新的一个版本 {upgrade_content[0][0]}")
-            upgrade_content[0][1].update({"make-time": k})
-            with open(get_resource(args.cfgfile), "w", encoding="utf-8") as f:
-                f.write(json.dumps(upgrade_content[0][1]))
-        else:
-            logger.info("没有新的配置文件可用")
+    if K_UPDATE_CONFIG_UNDER_CONSTRUCTION:
+        logger.warning(f"更新配置文件")
     else:
-        logger.info("更新配置文件 - 选项已禁用")
+        if upgrade_config.get("enable-config-update", False):
+            for k, v in head_json.get("config-file-update", dict()).items():
+                if local_make_time == 0:
+                    logger.warning(
+                        f"make-time 键值对未设置，Symbiosis 将默认为您填入缺省参数 {local_make_time}")
+                if decode_config_time_version(k) > decode_config_time_version(local_make_time):
+                    upgrade_content.append([k, v])
+            upgrade_content.sort(
+                key=lambda x: decode_config_time_version(x[0]), reverse=True)
+            if upgrade_content:
+                if len(upgrade_content) > 1:
+                    logger.info(
+                        f"检查到多个配置文件的累积更新，{", ".join([i[0] for i in upgrade_content])}。"
+                        f"将自动为您更新到最新的一个版本 {upgrade_content[0][0]}")
+                upgrade_content[0][1].update({"make-time": k})
+                with open(get_resource(args.cfgfile), "w", encoding="utf-8") as f:
+                    f.write(json.dumps(upgrade_content[0][1]))
+            else:
+                logger.info("没有新的配置文件可用")
+        else:
+            logger.info("更新配置文件 - 选项已禁用")
 
     upgrade_content = []
     #########################################################
@@ -580,6 +588,7 @@ globalsettings = fr_json.get("globalsettings", {})
 
 if __name__ == "__main__":
     logger.info(f"当前版本：{__version__}")
+    logger.info(f"操作系统版本：{platform.platform()}")
     for k, v in fr_json.get("execute", dict()).items():
         run(v)
     for k, v in fr_json.get("deleteFile", dict()).items():

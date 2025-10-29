@@ -1,3 +1,10 @@
+# 1.3.2 更新：
+- 此更新影响 execute 和 deleteFile 开关
+- Added: 检查 ShellExecuteW 函数的返回值
+- Modified: 优化 use_psexec 缺省路径的警告
+- Modified: 现在若禁用自动更新，get_update 不再尝试下载 version.json 文件，也不再检查 downgrade.json 文件，减少网络使用。
+- Added: deleteFile 添加 folders 和 only_subfolders 选项。
+
 # 1.3.1 更新：
 此更新影响 config.json 主配置文件中的 exec 和 download 键值对
 - Fixed: deleteFile 部分优化
