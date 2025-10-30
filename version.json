@@ -18,7 +18,8 @@
         "v1.2.4": "https://github.com/8388688/Symbiosis/releases/download/v1.2.4/Symbiosis.exe",
         "v1.3": "https://github.com/8388688/Symbiosis/releases/download/v1.3/Symbiosis.exe",
         "v1.3.1": "https://github.com/8388688/Symbiosis/releases/download/v1.3.1/Symbiosis.exe",
-        "v1.3.2": "https://github.com/8388688/Symbiosis/releases/download/v1.3.2/Symbiosis.exe"
+        "v1.3.2": "https://github.com/8388688/Symbiosis/releases/download/v1.3.2/Symbiosis.exe",
+        "v1.3.2.1": "https://github.com/8388688/Symbiosis/releases/download/v1.3.2.1/Symbiosis.exe"
     },
     "symbiosis-update-con": {
         "v0.3.0": "https://github.com/8388688/Symbiosis/releases/download/v0.3.0/Symbiosis_console.exe",
@@ -31,7 +32,8 @@
         "v1.2.4": "https://github.com/8388688/Symbiosis/releases/download/v1.2.4/Symbiosis_console.exe",
         "v1.3": "https://github.com/8388688/Symbiosis/releases/download/v1.3/Symbiosis_console.exe",
         "v1.3.1": "https://github.com/8388688/Symbiosis/releases/download/v1.3.1/Symbiosis_console.exe",
-        "v1.3.2": "https://github.com/8388688/Symbiosis/releases/download/v1.3.2/Symbiosis_console.exe"
+        "v1.3.2": "https://github.com/8388688/Symbiosis/releases/download/v1.3.2/Symbiosis_console.exe",
+        "v1.3.2.1": "https://github.com/8388688/Symbiosis/releases/download/v1.3.2.1/Symbiosis_console.exe"
     },
     "checksum-sha256-win": {
         "v1.2.2": "57b86a87d44aa7f9da242e00eae228c7dbeda4c0f01e30626cf511f17e866e73",
@@ -39,7 +41,8 @@
         "v1.2.4": "97bd186e6acbdd09bfa24c40c88a10350459ddd677463cf567360e01d13a8d0e",
         "v1.3": "0ed3cf07ace33e1830641e7a184a7c52118a0382e2385adbd7ba018f8700fdb6",
         "v1.3.1": "651c2ca1a6a022cf75da9bf1cf55b38ae0b3ce368c841a756835ecf7b370c461",
-        "v1.3.2": "041d6e6719c8ebc9de5b3cd1c43ab90b108ff7a7bf6c3ce15027348f206fdc02"
+        "v1.3.2": "041d6e6719c8ebc9de5b3cd1c43ab90b108ff7a7bf6c3ce15027348f206fdc02",
+        "v1.3.2.1": "e3b1566d5bf7a1c24782d157b19b1007ef5282d0f054e99b1f37482363a3c549"
     },
     "checksum-sha256-con": {
         "v1.2.2": "7b7d4c544c782ee0c9962d400785994a587799e373e6bc12a82fb17aa4ab1927",
@@ -47,7 +50,8 @@
         "v1.2.4": "78b5a94df309333024d128b9a03dc53a96a77b5c5d8b2bd354f91c575ac75ce4",
         "v1.3": "1cf7945adbd421a6a4a1e38f82434fbc62f46bcf854318a7e2eeb0951a713915",
         "v1.3.1": "29cbd13bdfd8fb47aabe91695a5d732cdd9bba0cfc4d10f1b21fe5b4dd51b6e9",
-        "v1.3.2": "df1105427441e2f1b75c3d74548410dbb76ee86dcfcf1ccd92747fe5c388a1a1"
+        "v1.3.2": "df1105427441e2f1b75c3d74548410dbb76ee86dcfcf1ccd92747fe5c388a1a1",
+        "v1.3.2.1": "fb7e4d275564cd9a39f612888c4122c462336f3089c432134d1940c71fe34b85"
     },
     "config-file-update": {
         "2025.07.02.00.00.00": {

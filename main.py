@@ -194,7 +194,7 @@ def run(config: dict):
     psexec_fp = resource_path(
         "scripts", "PsExec64.exe" if is64bitPlatform() else "PsExec.exe")
     psexec_fp_exists = True
-    if not os.path.exists(psexec_fp) and "use_psexec" in config.get():
+    if not os.path.exists(psexec_fp) and "use_psexec" in config.keys():
         logger.warning(f"{psexec_fp} 路径不存在，{use_psexec=} 实际成为无效设置。")
         psexec_fp_exists = False
     if not fake:
@@ -341,7 +341,7 @@ def download(config):
 
 def deleteFile(config):
     fp = config.get("src")
-    del_folder = config.get("folders", globalsettings.get("folders", False))
+    del_folder = config.get("folders", globalsettings.get("folders", True))
     only_subfolder = config.get(
         "only_subfolders", globalsettings.get("only_subfolders", False))
     logger.info(f"删除 [{fp}] 及其所属文件")

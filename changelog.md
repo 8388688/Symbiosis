@@ -1,3 +1,6 @@
+# 1.3.2.1 紧急更新：
+修复 run 函数中的一个 bug
+
 # 1.3.2 更新：
 - 此更新影响 execute 和 deleteFile 开关
 - Added: 检查 ShellExecuteW 函数的返回值
