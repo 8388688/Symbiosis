@@ -1,7 +1,7 @@
-// 本文最后更新于 2025-10-25
+// 本文最后更新于 2025-10-29
 {
     "execute": {
-        "1": {
+        "task1": {
             "parameters": List[str] = ["p1", "p2", ...]
             "exec": PathLike,
             "uac_admin": bool,
@@ -19,12 +19,12 @@
             "disable": false
             "datetime": "2000/1/1.."
         },
-        "2": {
+        "task2": {
             ...
         },
     },
     "download": {
-        "t": {
+        "task1": {
             "url": ...,
             "filepath": ...,
             "timestamp": bool, // false = 如果文件已存在，则覆盖该文件, true = 时间戳
@@ -49,11 +49,15 @@
         ...
     },
     "deleteFile": {
-        "del01": {
-            "src": <filepath>
+        "task1": {
+            "src": <filepath>,
+            "folders": <bool>, // 删除文件夹，此开关默认为 true
+            "only_subfolders": <bool> // 【不】删除根文件夹，此开关默认为 false
+            // 注意，当 folders 为 false 的时候，only_subfolders 成为无效设置，此时不会删除任何文件夹（包括根文件夹）。
         },
-        "del02": {
+        "task2": {
             "src": <filepath>
+            ...
         }
     },
     "upgrade": {
