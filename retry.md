@@ -29,5 +29,6 @@ code 取值范围：\[0..255\] 的整数
 129 = Read configure file ERROR: symbiosis-update 键值对为空
 130 = 强制更新的版本号标志错误
 131 = upgrade 配置键值对没有任何关于更新的配置
+132 = exec_fp 指定的路径不存在
 
 192 = 保存的目标文件所在的目录不存在

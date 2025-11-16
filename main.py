@@ -1,4 +1,6 @@
 import argparse
+from traceback import format_exc
+from typing import Callable
 import colorlog
 import ctypes
 import hashlib
@@ -17,8 +19,8 @@ from urllib3.exceptions import ProtocolError
 from requests.exceptions import SSLError, MissingSchema, ConnectionError, InvalidURL, InvalidSchema, RequestException
 # from typing import AnyStr
 
-__version__ = "v1.3.2"
-K_UPDATE_CONFIG_UNDER_CONSTRUCTION = True
+__version__ = "v1.4"
+K_UPDATE_CONFIG_UNDER_CONSTRUCTION = False
 
 
 def is_exec():
@@ -175,7 +177,8 @@ def md5check(fpath, algorithm, expected_hash) -> bool:
         return False
 
 
-def run(config: dict):
+def run(id_, config: dict):
+    logger.debug(f"运行 {id_}")
     time_ch = check_time_can_do(config)
     exec_fp: PathLike = config.get("exec")
     parameters_orig: list[str] = config.get(
@@ -200,7 +203,10 @@ def run(config: dict):
     if not fake:
         if exec_fp is None:
             logger.error(f"键值对 exec 为必填")
-            return 128
+            return 132
+        if not os.path.exists(exec_fp):
+            logger.error(f"{exec_fp} 文件不存在")
+            return
         if time_ch[1]:
             logger.info(
                 f"启动: {exec_fp=}, {parameters_orig=}, {uac_admin=}, {workdir=}, {use_psexec=}")
@@ -308,7 +314,7 @@ def download_api(url, file_path, headers, checksum: dict = dict(), ignore_status
     return 0
 
 
-def download(config):
+def download(id_, config):
     "返回值为 0 表示正常下载，非 0 值表示最后一次下载异常退出的错误码（对照表参考 download_api）"
     url = config["url"]
     filepath = config["filepath"]
@@ -333,13 +339,14 @@ def download(config):
             else:
                 break
         else:
-            logger.error(f"Discard: {k}")
+            logger.error(f"Discard: {id_}")
     else:
         logger.info(f"启动时间不在 {time_ch[0]} 范围内")
     return status
 
 
-def deleteFile(config):
+def deleteFile(id_, config):
+    logger.debug(f"刪除文件 {id_}")
     fp = config.get("src")
     del_folder = config.get("folders", globalsettings.get("folders", True))
     only_subfolder = config.get(
@@ -357,7 +364,9 @@ def deleteFile(config):
                 continue
             if os.path.isfile(i):
                 tmp = os.path.getsize(i)
-                os.remove(i)
+                # 这一行取消只读属性
+                ctypes.windll.kernel32.SetFileAttributesW(i, 0)
+                os.unlink(i)
                 logger.debug(f"del file: {i}")
                 tot_size += tmp
                 tot_file += 1
@@ -379,15 +388,43 @@ def deleteFile(config):
         logger.info(f"总计删除 {tot_size} 字节，{tot_file} 个文件，{tot_dir} 个文件夹。")
 
 
+def update_single_file(config: dict, local_make_time, save_path):
+    old_file_fp = save_path + ".orig"
+    upgrade_content = []
+    for k, v in config.items():
+        if local_make_time == 0:
+            logger.warning(
+                f"make-time 键值对未设置，Symbiosis 将默认为您填入缺省参数 {local_make_time}")
+        if decode_config_time_version(k) > decode_config_time_version(local_make_time):
+            upgrade_content.append([k, v])
+    upgrade_content.sort(
+        key=lambda x: decode_config_time_version(x[0]), reverse=True)
+    if upgrade_content:
+        if len(upgrade_content) > 1:
+            logger.info(
+                f"检查到多个配置文件的累积更新：{", ".join([i[0] for i in upgrade_content])}。"
+                f"将自动为您更新到最新的一个版本 {upgrade_content[0][0]}")
+        upgrade_content[0][1].update({"make-time": k})
+        if os.path.exists(old_file_fp):
+            os.unlink(old_file_fp)
+        if os.path.exists(save_path):
+            os.rename(save_path, old_file_fp)
+        with open(save_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(upgrade_content[0][1], indent=4))
+    else:
+        logger.info("没有新的配置文件可用")
+
+
 def get_update():
     upgrade_config = fr_json.get("upgrade", dict())
     if not upgrade_config:
+        logger.error(f"无法更新，因为 upgrade 键值对没有任何内容 [Error {131}]")
         return 131
     local_make_time = fr_json.get("make-time", 0)
     retry = upgrade_config.get("retry", globalsettings.get("retry", 1))
     upgrade_json_fp = get_exec() + ".upgrade"
     upgrade_execute_fp = get_exec() + ".tmp"
-    upgrade_old_execute_fp = get_exec() + ".old"
+    upgrade_old_execute_fp = get_exec() + ".orig"
     upgrade_content = []
     if retry == 0:
         logger.info("Self-upgrade is disabled.")
@@ -401,8 +438,8 @@ def get_update():
         downgrade_config = dict()
     downgrade_sign = downgrade_config.get("downgrade", None)
     logger.info("Downloading version of configure file. . .")
-    exit_code = download(
-        {"url": upgrade_config["json-url"], "filepath": upgrade_json_fp, "retry": retry, "timestamp": False})
+    exit_code = download("get-update",
+                         {"url": upgrade_config["json-url"], "filepath": upgrade_json_fp, "retry": retry, "timestamp": False})
     if exit_code != 0:
         logger.error(
             f"Cannot download version of configure file (Error {exit_code})")
@@ -416,24 +453,12 @@ def get_update():
         logger.warning(f"更新配置文件")
     else:
         if upgrade_config.get("enable-config-update", False):
-            for k, v in head_json.get("config-file-update", dict()).items():
-                if local_make_time == 0:
-                    logger.warning(
-                        f"make-time 键值对未设置，Symbiosis 将默认为您填入缺省参数 {local_make_time}")
-                if decode_config_time_version(k) > decode_config_time_version(local_make_time):
-                    upgrade_content.append([k, v])
-            upgrade_content.sort(
-                key=lambda x: decode_config_time_version(x[0]), reverse=True)
-            if upgrade_content:
-                if len(upgrade_content) > 1:
-                    logger.info(
-                        f"检查到多个配置文件的累积更新，{", ".join([i[0] for i in upgrade_content])}。"
-                        f"将自动为您更新到最新的一个版本 {upgrade_content[0][0]}")
-                upgrade_content[0][1].update({"make-time": k})
-                with open(get_resource(args.cfgfile), "w", encoding="utf-8") as f:
-                    f.write(json.dumps(upgrade_content[0][1]))
-            else:
-                logger.info("没有新的配置文件可用")
+            logger.info("更新配置文件")
+            update_single_file(head_json.get(
+                "config-file-update", dict()), local_make_time, get_resource(args.cfgfile))
+            logger.info("更新临时配置文件")
+            update_single_file(head_json.get(
+                "temp-config-update", dict()), local_make_time, get_resource(args.tmp_cfg))
         else:
             logger.info("更新配置文件 - 选项已禁用")
 
@@ -451,10 +476,10 @@ def get_update():
     if downgrade_sign is not None:
         logger.info(f"发现无视版本的强制更新标志，准备更新至 {downgrade_sign}")
         if downgrade_sign in head_json[up_list_key].keys():
-            download(
-                {"url": head_json[up_list_key][downgrade_sign],
-                 "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False,
-                 "checksum": {"sha256": head_json[up_hash_key][downgrade_sign]}})
+            download("downgrade",
+                     {"url": head_json[up_list_key][downgrade_sign],
+                      "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False,
+                      "checksum": {"sha256": head_json[up_hash_key][downgrade_sign]}})
             if not downgrade_config.get("permanent", False):
                 logger.debug("已清除一次性更新标志")
                 downgrade_config.update({"downgrade": None})
@@ -464,7 +489,7 @@ def get_update():
                     "这可能会扰乱正常更新进度，"
                     "除非你确定自己在干什么，否则请使用一次性更新标志（permanent=false）")
             with open(get_resource("downgrade.json"), "w") as f:
-                f.write(json.dumps(downgrade_config))
+                f.write(json.dumps(downgrade_config, indent=4))
         else:
             logger.error(
                 f"强制更新标志应该是 {', '.join(head_json[up_list_key].keys())} 之一，而不是 {downgrade_sign}")
@@ -480,21 +505,18 @@ def get_update():
                     f"检查到多个版本的累积更新: {', '.join([i[0] for i in upgrade_content])}。"
                     f"将自动为您更新到最新版本 {upgrade_content[0][0]}")
             download(
+                "get-update",
                 {"url": upgrade_content[0][1], "filepath": upgrade_execute_fp,
                  "retry": retry, "timestamp": False,
                  "checksum": {"sha256": head_json[up_hash_key][upgrade_content[0][0]]}})
         else:
-            logger.info("暂无更新")
+            logger.info("主程序暂无更新")
             return exit_code
     if os.path.exists(upgrade_old_execute_fp):
         logger.debug(f"移除旧版本程序 - {upgrade_old_execute_fp}")
         os.unlink(upgrade_old_execute_fp)
     os.rename(get_exec(), upgrade_old_execute_fp)
     os.rename(upgrade_execute_fp, get_exec())
-    # else:
-    # json_0 = req.json()
-    # for i in json_0["content"]:
-    # pass
 
     return exit_code
 
@@ -531,69 +553,152 @@ def get_assistance():
         os.unlink(get_resource(fname))
 
 
-if not os.path.exists(get_resource("__SymbiosisLogs__")):
-    os.mkdir(get_resource("__SymbiosisLogs__"))
-os.chdir(get_resource())
-console_formatter = colorlog.ColoredFormatter(
-    "%(log_color)s[%(asctime)s.%(msecs)03d] %(filename)s -> %(name)s %(funcName)s line:%(lineno)d [%(levelname)s]: %(message)s",
-    datefmt="%Y-%m-%dT%H.%M.%SZ",
-    log_colors={
-        "DEBUG": "white",
-        "INFO": "green",
-        "NOTICE": "cyan",
-        "WARNING": "yellow",
-        "ERROR": "red",
-        "CRITICAL": "bold_red,bg_white",
-    }
-)
-file_formatter = logging.Formatter(
-    "[%(asctime)s.%(msecs)03d] %(filename)s -> %(name)s %(funcName)s line:%(lineno)d [%(levelname)s]: %(message)s",
-    datefmt="%Y-%m-%dT%H.%M.%SZ",
-)
-console = colorlog.StreamHandler()
-console.setFormatter(console_formatter)
-file_log = logging.FileHandler(get_resource(
-    "__SymbiosisLogs__", f"{int(time.time() // 86400 // 30)}.log"), encoding="utf-8")
-file_log.setFormatter(file_formatter)
-time_rotate_file = logging.handlers.TimedRotatingFileHandler(filename=get_resource(
-    "__SymbiosisLogs__", "time_rotate"), encoding="utf-8", when="D", interval=1)
-time_rotate_file.setFormatter(file_formatter)
-time_rotate_file.setLevel(logging.DEBUG)
+def parse_args() -> argparse.Namespace:
+    params = argparse.ArgumentParser()
+    params.add_argument("cfgfile", nargs="?", default="config.json")
+    params.add_argument("tmp_cfg", nargs="?", default="config.temp.json")
+    params.add_argument("--debug", action="store_true")
+    args, unknown = params.parse_known_args()
+    if args.debug:
+        logger.setLevel(colorlog.DEBUG)
+    else:
+        logger.setLevel(colorlog.INFO)
+    if unknown:
+        logger.warning(f"未知 {len(unknown)} 参数: {', '.join(unknown)}")
+    else:
+        logger.debug(f"传参：{args}")
+        logger.info(f"参数规范 :)")
+    return args
 
-logger = colorlog.getLogger("Symbiosis")
-logger.addHandler(console)
-logger.addHandler(file_log)
-logger.addFilter(time_rotate_file)
-console.close()
-file_log.close()
-time_rotate_file.close()
 
-params = argparse.ArgumentParser()
-params.add_argument("cfgfile", nargs="?", default="config.json")
-params.add_argument("--debug", action="store_true")
-args, unknown = params.parse_known_args()
-if args.debug:
-    logger.setLevel(colorlog.DEBUG)
-else:
-    logger.setLevel(colorlog.INFO)
-if unknown:
-    logger.warning(f"未知参数: {unknown}")
-else:
-    logger.info(f"参数规范 :)")
+def merge_config(conf1, conf2):
+    pass
+
+
+def get_config(conf_fp, temp_conf_fp):
+    config = dict()
+    tmp = dict()
+    tmp.update({"ignore_case": False})
+    with open(temp_conf_fp, "r", encoding="utf-8") as f:
+        tmp.update(json.loads(f.read()))
+    if tmp.get("ignore_case"):
+        pass
+    else:
+        with open(conf_fp, "r", encoding="utf-8") as f:
+            config.update(json.loads(f.read()))
+    tmp.pop("ignore_case")
+    # TODO: 这个 update 操作，会将 config.temp.json 部分覆盖 config.json 中的原有内容，即使 ignore_case 被设为 false 也会造成信息丢失。
+    # FIXME: 用 merge_config 解决，实现无损合并。
+    config.update(tmp)
+    ##
+    with open(temp_conf_fp, "w", encoding="utf-8") as f:
+        f.write(r"{}")
+    del tmp
+    return config
+
+
+def put_config(config, conf_fp):
+    with open(conf_fp, "w", encoding="utf-8") as f:
+        f.write(json.dumps(config, indent=4))
+
+
+def init_logger() -> logging.Logger:
+    if not os.path.exists(get_resource("logs")):
+        os.makedirs(get_resource("logs"), exist_ok=True)
+    os.chdir(get_resource())
+    console_formatter = colorlog.ColoredFormatter(
+        "%(log_color)s[%(asctime)s.%(msecs)03d] %(filename)s -> %(funcName)s line:%(lineno)d [%(levelname)s]: %(message)s",
+        datefmt="%Y-%m-%dT%H.%M.%SZ",
+        log_colors={
+            "DEBUG": "white",
+            "INFO": "green",
+            "NOTICE": "cyan",
+            "WARNING": "yellow",
+            "ERROR": "red",
+            "CRITICAL": "bold_red,bg_white",
+        }
+    )
+    file_formatter = logging.Formatter(
+        "[%(asctime)s.%(msecs)03d] %(filename)s -> %(funcName)s line:%(lineno)d [%(levelname)s]: %(message)s",
+        datefmt="%Y-%m-%dT%H.%M.%SZ",
+    )
+    console = colorlog.StreamHandler()
+    console.setFormatter(console_formatter)
+
+    # 使用按天轮转的文件日志处理器，保留最近 30 个日志文件（可根据需要调整 backupCount）
+    rotating_fp = get_resource("logs", "symbiosis.log")
+    time_rotate_file = logging.handlers.TimedRotatingFileHandler(
+        filename=rotating_fp,
+        when="midnight",
+        interval=1,
+        backupCount=1999998,
+        encoding="utf-8",
+        utc=False,
+    )
+    time_rotate_file.setFormatter(file_formatter)
+    time_rotate_file.setLevel(logging.DEBUG)
+
+    logger = colorlog.getLogger("Symbiosis")
+    logger.addHandler(console)
+    logger.addHandler(time_rotate_file)
+    logger.propagate = False
+
+    return logger
+
+
+def run_series(type_, config, fx: Callable):
+    logger.debug(f"执行 {type_} 操作")
+    eaten = []
+    tmp: dict = config
+    for k, v in tmp.items():
+        if v.get("TTL", -1) == 0:
+            eaten.append(k)
+        else:
+            fx(k, v)
+            tmp[k].update({"TTL": v.get("TTL", -1) - 1})
+    logger.debug(f"{eaten=}")
+    for i in eaten:
+        tmp.pop(i)
+    del eaten
+    return tmp
+
+
+def main():
+    logger.info(f"当前版本：{__version__}")
+    logger.info(f"操作系统版本：{platform.platform()}")
+    try:
+        get_assistance()
+        for i, fx in OPERATORS:
+            fr_json.update({i: run_series(i, fr_json.get(i, dict()), fx)})
+        get_update()
+        put_config(fr_json, fp)
+    except Exception as e:
+        exc_type, exc_value, exc_obj = sys.exc_info()
+        logger.critical("======= FATAL ERROR =======")
+        logger.critical("exception_type: \t%s" % exc_type)
+        logger.critical("exception_value: \t%s" % exc_value)
+        logger.critical("exception_object: \t%s" % exc_obj)
+        logger.critical(f"======= FULL EXCEPTION =======\n{format_exc()}")
+    else:
+        pass
+    finally:
+        pass
+
+
+OPERATORS = (("execute", run), ("deleteFile", deleteFile),
+             ("download", download))
+logger = init_logger()
+args = parse_args()
 fp = os.path.join(get_resource(args.cfgfile))
-with open(fp, "r", encoding="utf-8") as f:
-    fr_json: dict = json.loads(f.read())
-globalsettings = fr_json.get("globalsettings", {})
+temporary_fp = os.path.join(get_resource(args.tmp_cfg))
+try:
+    fr_json = get_config(fp, temporary_fp)
+except Exception as e:
+    logger.critical(f"读取文件时出错: {e}")
+    sys.exit(0)
+else:
+    globalsettings = fr_json.get("globalsettings", {})
 
 
 if __name__ == "__main__":
-    logger.info(f"当前版本：{__version__}")
-    logger.info(f"操作系统版本：{platform.platform()}")
-    for k, v in fr_json.get("execute", dict()).items():
-        run(v)
-    for k, v in fr_json.get("deleteFile", dict()).items():
-        deleteFile(v)
-    for k, v in fr_json.get("download", dict()).items():
-        download(v)
-    get_update()
-    get_assistance()
+    main()
