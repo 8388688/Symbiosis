@@ -1,4 +1,4 @@
-// 本文最后更新于 2025-10-29
+// 本文最后更新于 2025-11-16
 {
     "execute": {
         "task1": {
@@ -16,8 +16,9 @@
             * uac_admin=false, use_psexec=false 表示以当前 Symbiosis 的权限运行程序。
             */
             "workdir": PathLike,
-            "disable": false
-            "datetime": "2000/1/1.."
+            "disable": false,
+            "datetime": "2000/1/1..",
+            "TTL": int, // 表示再执行多少次就删除这个任务，设置为负数表示永不删除。
         },
         "task2": {
             ...
