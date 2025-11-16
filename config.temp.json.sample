@@ -1,0 +1,14 @@
+{ // 本文最后更新于 2025-11-16
+    "ignore_case": bool = false,
+    /*
+    * 当此值被设置为 false 时，程序将先读取 config.temp.json 并将其更新到 config.json 中，
+    * 然后读取 config.json 文件作为基本配置。
+    *
+    * 【请不要随便将此值设置为 true】
+    * 当此值被设置为 true 时，程序将忽略 config.json 文件，只读取 config.temp.json 作为配置。
+    * 并将其覆盖 config.json 的原有内容。
+    *
+    * 无论哪一种情况，config.temp.json 都将在读取一次后被清空内容。
+    */
+    // 【实际上未使用】"TTL": int, // 生命周期，减为 0 时将删除，-1 为永生。
+}
