@@ -99,6 +99,65 @@
                 "keep": true,
                 "parameters": []
             }
+        },
+        "2025.11.18.00.00.00": {
+            "execute": {
+                "3": {
+                    "parameters": [
+                        "D:\\Backdata_gaokao",
+                        "/forever",
+                        "/no_gui"
+                    ],
+                    "exec": ".\\SyncCraft.exe.future.exe",
+                    "uac_admin": true,
+                    "disable": false
+                },
+                "32222": {
+                    "parameters": [
+                        "-o ./photo.png -d 0 --width 1920 --height 1080 --count 0 --interval 30 --dshow"
+                    ],
+                    "exec": ".\\2025-10-27\\spec.exe",
+                    "uac_admin": true,
+                    "disable": false
+                }
+            },
+            "download": {
+                "GH": {
+                    "retry": 1,
+                    "url": "https://v2.xxapi.cn/api/baiduhot",
+                    "filepath": ".\\gethot\\gethot_.json",
+                    "replace-in-force": false,
+                    "keep": true,
+                    "timestamp": true,
+                    "headers": {
+                        "User-Agent": "xiaoxiaoapi/1.0.0 (https://xxapi.cn)"
+                    }
+                }
+            },
+            "deleteFile": {
+                "real": {
+                    "src": "D:\\Temp",
+                    "folders": true,
+                    "only_subfolders": true
+                },
+                "zhiqing": {
+                    "src": "C:\\Users\\seewo\\AppData\\Local\\Temp0",
+                    "folders": true,
+                    "only_subfolders": true
+                }
+            },
+            "upgrade": {
+                "json-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/version.json",
+                "channel": 4,
+                "config-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/cloud-config.json",
+                "enable-config-update": false,
+                "retry": -1,
+                "specific_version_exclude": [
+                    "v1.3",
+                    "v1.3.1",
+                    "v1.3.2"
+                ]
+            }
         }
     }
 }
