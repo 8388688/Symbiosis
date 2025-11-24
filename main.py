@@ -1,6 +1,6 @@
 import argparse
 from traceback import format_exc
-from typing import Callable
+from typing import Callable, Mapping
 import colorlog
 import ctypes
 import hashlib
@@ -19,8 +19,10 @@ from urllib3.exceptions import ProtocolError
 from requests.exceptions import SSLError, MissingSchema, ConnectionError, InvalidURL, InvalidSchema, RequestException
 # from typing import AnyStr
 
-__version__ = "v1.4"
+# 注意：1.4.2 将强制更新配置文件
+__version__ = "v1.4.1"
 K_UPDATE_CONFIG_UNDER_CONSTRUCTION = False
+K_FORCE_UPDATE_CONFIG = False
 
 
 def is_exec():
@@ -438,8 +440,8 @@ def get_update():
         downgrade_config = dict()
     downgrade_sign = downgrade_config.get("downgrade", None)
     logger.info("Downloading version of configure file. . .")
-    exit_code = download("get-update",
-                         {"url": upgrade_config["json-url"], "filepath": upgrade_json_fp, "retry": retry, "timestamp": False})
+    exit_code = download(
+        "get-update", {"url": upgrade_config["json-url"], "filepath": upgrade_json_fp, "retry": retry, "timestamp": False})
     if exit_code != 0:
         logger.error(
             f"Cannot download version of configure file (Error {exit_code})")
@@ -452,7 +454,7 @@ def get_update():
     if K_UPDATE_CONFIG_UNDER_CONSTRUCTION:
         logger.warning(f"更新配置文件")
     else:
-        if upgrade_config.get("enable-config-update", False):
+        if K_FORCE_UPDATE_CONFIG or upgrade_config.get("enable-config-update", False):
             logger.info("更新配置文件")
             update_single_file(head_json.get(
                 "config-file-update", dict()), local_make_time, get_resource(args.cfgfile))
@@ -487,7 +489,7 @@ def get_update():
                 logger.warning(
                     "永久更新标志会在 Symbiosis 每次启动时都尝试一次降级更新，"
                     "这可能会扰乱正常更新进度，"
-                    "除非你确定自己在干什么，否则请使用一次性更新标志（permanent=false）")
+                    "除非你确定自己在干什么，否则请使用一次性更新标志（permanent=false）。")
             with open(get_resource("downgrade.json"), "w") as f:
                 f.write(json.dumps(downgrade_config, indent=4))
         else:
@@ -571,16 +573,29 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def merge_config(conf1, conf2):
-    pass
+def merge_config(conf1, conf2, ip=False):
+    # conf1 <-- conf2
+    res = conf1.copy()
+    for k, v in conf2.items():
+        if k in res.keys() and isinstance(v, Mapping):
+            res[k].update(merge_config(res[k], v))
+        else:
+            res.update({k: v})
+    if ip:
+        conf1.clear()
+        conf1.update(res)
+    return res
 
 
 def get_config(conf_fp, temp_conf_fp):
     config = dict()
     tmp = dict()
     tmp.update({"ignore_case": False})
-    with open(temp_conf_fp, "r", encoding="utf-8") as f:
-        tmp.update(json.loads(f.read()))
+    if not os.path.exists(temp_conf_fp):
+        logger.error(f"{temp_conf_fp} 不存在，你可以将其视为空值，该文件在后续将自动创建。")
+    else:
+        with open(temp_conf_fp, "r", encoding="utf-8") as f:
+            tmp.update(json.loads(f.read()))
     if tmp.get("ignore_case"):
         pass
     else:
@@ -589,7 +604,7 @@ def get_config(conf_fp, temp_conf_fp):
     tmp.pop("ignore_case")
     # TODO: 这个 update 操作，会将 config.temp.json 部分覆盖 config.json 中的原有内容，即使 ignore_case 被设为 false 也会造成信息丢失。
     # FIXME: 用 merge_config 解决，实现无损合并。
-    config.update(tmp)
+    config.update(merge_config(config, tmp))
     ##
     with open(temp_conf_fp, "w", encoding="utf-8") as f:
         f.write(r"{}")
