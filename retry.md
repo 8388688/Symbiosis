@@ -26,9 +26,12 @@ code 取值范围：\[0..255\] 的整数
 127 = unexpected error
 
 128 = 用户禁用了更新
-129 = Read configure file ERROR: symbiosis-update 键值对为空
+129 = 【此状态码将在 v1.5 废弃】Read configure file ERROR: symbiosis-update 键值对为空
 130 = 强制更新的版本号标志错误
 131 = upgrade 配置键值对没有任何关于更新的配置
 132 = exec_fp 指定的路径不存在
+133 = exec_fp 键值对缺失
+134 = 一般更新错误
 
-192 = 保存的目标文件所在的目录不存在
+192 = 保存的目标文件所在的目录不存在。（v1.4.2 之前）
+192 = 保存目标文件时，发生 I/O 系统错误。（v1.4.2 之后）

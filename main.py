@@ -20,9 +20,9 @@ from requests.exceptions import SSLError, MissingSchema, ConnectionError, Invali
 # from typing import AnyStr
 
 # 注意：1.4.2 将强制更新配置文件
-__version__ = "v1.4.1"
-K_UPDATE_CONFIG_UNDER_CONSTRUCTION = False
-K_FORCE_UPDATE_CONFIG = False
+__version__ = "v1.4.2"
+K_FORCE_UPDATE_CONFIG = True
+K_ENABLE_FUTURE = True
 
 
 def is_exec():
@@ -55,12 +55,8 @@ def is_admin() -> bool:
         return False
 
 
-def getOSbit():
-    return platform.architecture()
-
-
 def is64bitPlatform() -> bool:
-    return getOSbit()[0].lower() == "64bit"
+    return sys.maxsize == 2 ** 63 - 1
 
 
 def listdir_p_gen(__fp):
@@ -180,7 +176,7 @@ def md5check(fpath, algorithm, expected_hash) -> bool:
 
 
 def run(id_, config: dict):
-    logger.debug(f"运行 {id_}")
+    logger.info(f"运行 {id_=}")
     time_ch = check_time_can_do(config)
     exec_fp: PathLike = config.get("exec")
     parameters_orig: list[str] = config.get(
@@ -205,23 +201,23 @@ def run(id_, config: dict):
     if not fake:
         if exec_fp is None:
             logger.error(f"键值对 exec 为必填")
-            return 132
+            return 133
         if not os.path.exists(exec_fp):
-            logger.error(f"{exec_fp} 文件不存在")
-            return
+            logger.error(f"{exec_fp=} 文件不存在")
+            return 132
         if time_ch[1]:
-            logger.info(
+            logger.debug(
                 f"启动: {exec_fp=}, {parameters_orig=}, {uac_admin=}, {workdir=}, {use_psexec=}")
             if use_psexec and psexec_fp_exists:
                 parameters: str = f"-d -i {'-s' if uac_admin else '-l'} -w {workdir} -accepteula -nobanner {exec_fp} " + \
                     " ".join((str(i) for i in parameters_orig))
-                exit_code = ctypes.windll.shell32.ShellExecuteW(
-                    None, "runas" if uac_admin else "open", psexec_fp, parameters, workdir, 1)
+                exec_fp_impass = psexec_fp
             else:
                 parameters: str = " ".join((str(i) for i in parameters_orig))
-                exit_code = ctypes.windll.shell32.ShellExecuteW(
-                    None, "runas" if uac_admin else "open", exec_fp, parameters, workdir, 1)
-            logger.info(f"启动完成（不一定启动成功），返回状态码为 {exit_code}")
+                exec_fp_impass = exec_fp
+            exit_code = ctypes.windll.shell32.ShellExecuteW(
+                None, "runas" if uac_admin else "open", exec_fp_impass, parameters, workdir, 1)
+            logger.info(f"启动 {exec_fp} 完成（不一定启动成功），返回状态码为 {exit_code}")
         else:
             logger.info(f"启动时间不在 {time_ch[0]} 范围内")
     else:
@@ -240,23 +236,20 @@ def download_api(url, file_path, headers, checksum: dict = dict(), ignore_status
     :param savemode: 保存方式
     :param nodisplay: download without display anything if `nodisplay == True`
     """
-    if not os.path.isdir(os.path.dirname(file_path)):
-        logger.error(f"无法保存至 {file_path}")
-        return 192
     headers = headers
     try:
         r = requests.get(url, stream=True, verify=True, headers=headers)
     except SSLError:
-        logger.error(f'SSLError! {url} is not secure.')
+        logger.error(f'SSLError! [{url}] is not secure.')
         return 7  # SSL 证书无效或已过期
     except MissingSchema:
-        logger.error(f"Invalid URL {url}: No scheme supplied")
+        logger.error(f"Invalid URL [{url}]: No scheme supplied")
         return 11  # 协议格式不正确
     except InvalidURL:
-        logger.error(f"Invalid URL: Failed to parse {url}")
+        logger.error(f"Invalid URL: Failed to parse [{url}]")
         return 8  # URL 格式不正确
     except InvalidSchema:
-        logger.error(f"No connection adapters were found for {url}")
+        logger.error(f"No connection adapters were found for [{url}]")
         return 10  # 无法辨识的协议
     except ProtocolError as e:
         logger.error(f"ProtocolError")
@@ -287,7 +280,7 @@ def download_api(url, file_path, headers, checksum: dict = dict(), ignore_status
     else:
         filesize = int(filesize)
 
-    logger.info(f"校验: url: {url}, 大小: {filesize}")
+    logger.info(f"校验: url: {url}, 大小: {filesize if filesize != -1 else '?'}")
     logger.debug(f"当前 UA: {headers.get('User-Agent', '<空>')}")
     if ignore_status or r.status_code == 200:
         pass
@@ -296,12 +289,21 @@ def download_api(url, file_path, headers, checksum: dict = dict(), ignore_status
         return 13
 
     st = time.time()
-    with open(file_path, "wb") as f:
-        for i in r.iter_content(chunk_size=16384):
-            f.write(i)
+    if not os.path.exists(os.path.dirname(file_path)):
+        logger.debug(f"{file_path=}")
+        os.makedirs(os.path.dirname(file_path), exist_ok=False)
+    try:
+        with open(file_path, "wb") as f:
+            for i in r.iter_content(chunk_size=16384):
+                f.write(i)
+    except OSError as e:
+        logger.error(f"无法保存至 {file_path} (Error {e.winerror}: {e.strerror})")
+        return 192
+    else:
+        logger.debug(f"{url} 下载为 {file_path}")
     el = time.time() - st
     if checksum:
-        logger.info("校验文件中. . .")
+        logger.debug("校验文件中. . .")
         for k, v in checksum.items():
             logger.debug(f"校验文件的 {k} 值")
             if not md5check(file_path, k, v):
@@ -309,10 +311,10 @@ def download_api(url, file_path, headers, checksum: dict = dict(), ignore_status
             else:
                 logger.debug(f"文件的 {k} 哈希校验无误")
         else:
-            logger.info("文件哈希校验无误")
+            logger.debug("文件所有哈希校验无误")
 
     logger.info(
-        f"Download complete, time used: {el:.2f}s, average speed: {f'{filesize / el:.2f}B/s' if filesize != -1 and el != 0 else "?"}.")
+        f"Download complete, time used: {el:.2f}s.")
     return 0
 
 
@@ -390,9 +392,10 @@ def deleteFile(id_, config):
         logger.info(f"总计删除 {tot_size} 字节，{tot_file} 个文件，{tot_dir} 个文件夹。")
 
 
-def update_single_file(config: dict, local_make_time, save_path):
+def update_single_file_api(config: dict, local_make_time, save_path):
     old_file_fp = save_path + ".orig"
     upgrade_content = []
+    logger.debug(f"{config=}, {save_path=}")
     for k, v in config.items():
         if local_make_time == 0:
             logger.warning(
@@ -404,17 +407,36 @@ def update_single_file(config: dict, local_make_time, save_path):
     if upgrade_content:
         if len(upgrade_content) > 1:
             logger.info(
-                f"检查到多个配置文件的累积更新：{", ".join([i[0] for i in upgrade_content])}。"
+                f"检查到多个文件的累积更新：{", ".join([i[0] for i in upgrade_content])}。"
                 f"将自动为您更新到最新的一个版本 {upgrade_content[0][0]}")
-        upgrade_content[0][1].update({"make-time": k})
+        upgrade_content[0][1].update({"make-time": upgrade_content[0][0]})
         if os.path.exists(old_file_fp):
             os.unlink(old_file_fp)
         if os.path.exists(save_path):
             os.rename(save_path, old_file_fp)
         with open(save_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(upgrade_content[0][1], indent=4))
+        logger.info("complete.")
     else:
-        logger.info("没有新的配置文件可用")
+        logger.info("没有更新可用")
+
+
+def update_single_file(id_, dl_config: dict, local_make_time, save_path):
+    # dl_config 中的 filepath 为保存临时下载的路径
+    # save_path 为更新的目标路径
+    dl_config.update({"timestamp": False})
+    ex_code = download(id_, dl_config)
+    logger.debug(f"{dl_config=}, {save_path=}")
+    if ex_code == 0:
+        with open(dl_config.get("filepath"), "rb") as f:
+            tmp = json.loads(f.read())
+        exit_code = update_single_file_api(tmp, local_make_time, save_path)
+        logger.debug(f"delete: {dl_config.get('filepath')}")
+        os.unlink(dl_config.get("filepath"))
+        return exit_code
+    else:
+        logger.error(f"无法更新 {id_} - Error {ex_code}")
+        return 134
 
 
 def get_update():
@@ -439,86 +461,160 @@ def get_update():
         logger.warning("找不到 downgrade.json 文件")
         downgrade_config = dict()
     downgrade_sign = downgrade_config.get("downgrade", None)
-    logger.info("Downloading version of configure file. . .")
+    logger.debug("Downloading version of configure file. . .")
     exit_code = download(
-        "get-update", {"url": upgrade_config["json-url"], "filepath": upgrade_json_fp, "retry": retry, "timestamp": False})
+        "get-update", {
+            "url": upgrade_config["json-url"],
+            "filepath": upgrade_json_fp, "retry": retry, "timestamp": False})
     if exit_code != 0:
         logger.error(
             f"Cannot download version of configure file (Error {exit_code})")
         return exit_code
-    logger.info("Resolving configure file. . .")
+    logger.debug("Resolving configure file. . .")
     with open(upgrade_json_fp, "r", encoding="utf-8") as f:
         head_json = json.loads(f.read())
-    if os.path.exists(upgrade_json_fp):
-        os.unlink(upgrade_json_fp)
-    if K_UPDATE_CONFIG_UNDER_CONSTRUCTION:
-        logger.warning(f"更新配置文件")
-    else:
-        if K_FORCE_UPDATE_CONFIG or upgrade_config.get("enable-config-update", False):
-            logger.info("更新配置文件")
-            update_single_file(head_json.get(
-                "config-file-update", dict()), local_make_time, get_resource(args.cfgfile))
-            logger.info("更新临时配置文件")
-            update_single_file(head_json.get(
-                "temp-config-update", dict()), local_make_time, get_resource(args.tmp_cfg))
-        else:
-            logger.info("更新配置文件 - 选项已禁用")
+    os.unlink(upgrade_json_fp)
 
-    upgrade_content = []
     #########################################################
-    if upgrade_config.get("console", False):
-        up_list_key = "symbiosis-update-con"
-        up_hash_key = "checksum-sha256-con"
-    else:
-        up_list_key = "symbiosis-update-win"
-        up_hash_key = "checksum-sha256-win"
-    if not head_json.get(up_list_key, []):
-        logger.error(f"Read configure file ERROR: {up_list_key} 键值对为空")
-        return 129
-    if downgrade_sign is not None:
-        logger.info(f"发现无视版本的强制更新标志，准备更新至 {downgrade_sign}")
-        if downgrade_sign in head_json[up_list_key].keys():
-            download("downgrade",
-                     {"url": head_json[up_list_key][downgrade_sign],
-                      "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False,
-                      "checksum": {"sha256": head_json[up_hash_key][downgrade_sign]}})
-            if not downgrade_config.get("permanent", False):
-                logger.debug("已清除一次性更新标志")
-                downgrade_config.update({"downgrade": None})
+    if K_ENABLE_FUTURE:
+        if upgrade_config.get("console", False):
+            up_url_key = "url-con"
+            up_hash_key = "sha256-con"
+        else:
+            up_url_key = "url-win"
+            up_hash_key = "sha256-win"
+        if downgrade_sign is not None:
+            logger.info(f"发现无视版本的强制更新标志，准备更新至 {downgrade_sign}")
+            if downgrade_sign in head_json["update-14pp"].keys():
+                download("downgrade",
+                         {"url": head_json["update-14pp"][downgrade_sign][up_url_key],
+                          "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False,
+                          "checksum": {"sha256": head_json["update-14pp"][downgrade_sign][up_hash_key]}})
+                if not downgrade_config.get("permanent", False):
+                    logger.debug("已清除一次性更新标志")
+                    downgrade_config.update({"downgrade": None})
+                else:
+                    logger.warning(
+                        "永久更新标志会在 Symbiosis 每次启动时都尝试一次降级更新，"
+                        "这可能会扰乱正常更新进度，"
+                        "除非你确定自己在干什么，否则请使用一次性更新标志（permanent=false）。")
+                with open(get_resource("downgrade.json"), "w") as f:
+                    f.write(json.dumps(downgrade_config, indent=4))
             else:
-                logger.warning(
-                    "永久更新标志会在 Symbiosis 每次启动时都尝试一次降级更新，"
-                    "这可能会扰乱正常更新进度，"
-                    "除非你确定自己在干什么，否则请使用一次性更新标志（permanent=false）。")
-            with open(get_resource("downgrade.json"), "w") as f:
-                f.write(json.dumps(downgrade_config, indent=4))
+                logger.error(
+                    f"强制更新标志应该是 {', '.join(head_json["update-14pp"].keys())} 之一，而不是 {downgrade_sign}")
+                return 130
         else:
-            logger.error(
-                f"强制更新标志应该是 {', '.join(head_json[up_list_key].keys())} 之一，而不是 {downgrade_sign}")
-            return 130
+            for k, v in head_json["update-14pp"].items():
+                if decode_version(k) > decode_version(__version__) and k not in upgrade_config.get("specific_version_exclude", []):
+                    upgrade_content.append([k, v])
+            upgrade_content.sort(
+                key=lambda x: decode_version(x[0]), reverse=True)
+            if upgrade_content:
+                if len(upgrade_content) > 1:
+                    logger.info(
+                        f"检查到多个版本的累积更新: {', '.join([i[0] for i in upgrade_content])}。"
+                        f"将自动为您更新到最新版本 {upgrade_content[0][0]}")
+                ex_code = download(
+                    "get-update.14pp",
+                    {"url": upgrade_content[0][1][up_url_key], "filepath": upgrade_execute_fp,
+                     "retry": retry, "timestamp": False,
+                     "checksum": {"sha256": head_json["update-14pp"][upgrade_content[0][0]][up_hash_key]}}
+                )
+                if ex_code == 0:
+                    if os.path.exists(upgrade_old_execute_fp):
+                        logger.debug(f"移除旧版本程序 - {upgrade_old_execute_fp}")
+                        os.unlink(upgrade_old_execute_fp)
+                    os.rename(get_exec(), upgrade_old_execute_fp)
+                    os.rename(upgrade_execute_fp, get_exec())
+                tmp = upgrade_content[0][1].get("enable-config-update", None)
+                if tmp is not None:
+                    fr_json["upgrade"].update({"enable-config-update": tmp})
+            else:
+                logger.info(f"主程序暂无更新 {exit_code=}")
     else:
-        for k, v in head_json[up_list_key].items():
-            if decode_version(k) > decode_version(__version__) and k not in upgrade_config.get("specific_version_exclude", []):
-                upgrade_content.append([k, v])
-        upgrade_content.sort(key=lambda x: decode_version(x[0]), reverse=True)
-        if upgrade_content:
-            if len(upgrade_content) > 1:
-                logger.info(
-                    f"检查到多个版本的累积更新: {', '.join([i[0] for i in upgrade_content])}。"
-                    f"将自动为您更新到最新版本 {upgrade_content[0][0]}")
-            download(
-                "get-update",
-                {"url": upgrade_content[0][1], "filepath": upgrade_execute_fp,
-                 "retry": retry, "timestamp": False,
-                 "checksum": {"sha256": head_json[up_hash_key][upgrade_content[0][0]]}})
+        upgrade_content = []
+        if upgrade_config.get("console", False):
+            up_list_key = "symbiosis-update-con"
+            up_hash_key = "checksum-sha256-con"
         else:
-            logger.info("主程序暂无更新")
-            return exit_code
-    if os.path.exists(upgrade_old_execute_fp):
-        logger.debug(f"移除旧版本程序 - {upgrade_old_execute_fp}")
-        os.unlink(upgrade_old_execute_fp)
-    os.rename(get_exec(), upgrade_old_execute_fp)
-    os.rename(upgrade_execute_fp, get_exec())
+            up_list_key = "symbiosis-update-win"
+            up_hash_key = "checksum-sha256-win"
+        if not head_json.get(up_list_key, []):
+            # 此状态码将在 v1.5 废弃
+            logger.error(f"Read configure file ERROR: {up_list_key} 键值对为空")
+            return 129
+        if downgrade_sign is not None:
+            logger.info(f"发现无视版本的强制更新标志，准备更新至 {downgrade_sign}")
+            if downgrade_sign in head_json[up_list_key].keys():
+                download("downgrade",
+                         {"url": head_json[up_list_key][downgrade_sign],
+                          "filepath": upgrade_execute_fp, "retry": retry, "timestamp": False,
+                          "checksum": {"sha256": head_json[up_hash_key][downgrade_sign]}})
+                if not downgrade_config.get("permanent", False):
+                    logger.debug("已清除一次性更新标志")
+                    downgrade_config.update({"downgrade": None})
+                else:
+                    logger.warning(
+                        "永久更新标志会在 Symbiosis 每次启动时都尝试一次降级更新，"
+                        "这可能会扰乱正常更新进度，"
+                        "除非你确定自己在干什么，否则请使用一次性更新标志（permanent=false）。")
+                with open(get_resource("downgrade.json"), "w") as f:
+                    f.write(json.dumps(downgrade_config, indent=4))
+            else:
+                logger.error(
+                    f"强制更新标志应该是 {', '.join(head_json[up_list_key].keys())} 之一，而不是 {downgrade_sign}")
+                return 130
+        else:
+            for k, v in head_json[up_list_key].items():
+                if decode_version(k) > decode_version(__version__) and k not in upgrade_config.get("specific_version_exclude", []):
+                    upgrade_content.append([k, v])
+            upgrade_content.sort(
+                key=lambda x: decode_version(x[0]), reverse=True)
+            if upgrade_content:
+                if len(upgrade_content) > 1:
+                    logger.info(
+                        f"检查到多个版本的累积更新: {', '.join([i[0] for i in upgrade_content])}。"
+                        f"将自动为您更新到最新版本 {upgrade_content[0][0]}")
+                ex_code = download(
+                    "get-update",
+                    {"url": upgrade_content[0][1], "filepath": upgrade_execute_fp,
+                     "retry": retry, "timestamp": False,
+                     "checksum": {"sha256": head_json[up_hash_key][upgrade_content[0][0]]}}
+                )
+                if ex_code == 0:
+                    if os.path.exists(upgrade_old_execute_fp):
+                        logger.debug(f"移除旧版本程序 - {upgrade_old_execute_fp}")
+                        os.unlink(upgrade_old_execute_fp)
+                    os.rename(get_exec(), upgrade_old_execute_fp)
+                    os.rename(upgrade_execute_fp, get_exec())
+            else:
+                logger.info(f"主程序暂无更新 {exit_code=}")
+
+    if K_FORCE_UPDATE_CONFIG or upgrade_config.get("enable-config-update", True):
+        if K_ENABLE_FUTURE or decode_version(__version__) >= decode_version("v1.5.1"):
+            logger.info("更新主配置文件")
+            update_single_file("configFile.up", {
+                "url": fr_json["upgrade"]["config-url"],
+                "filepath": resource_path(args.configFile + ".upgrade"),
+                "retry": retry
+            }, local_make_time, get_resource(args.configFile))
+            #######
+            logger.info("更新补丁配置文件，补丁将在下一次启动时应用到主配置文件中。")
+            update_single_file("patchFile.up", {
+                "url": fr_json["upgrade"]["patch-url"],
+                "filepath": resource_path(args.patchFile + ".upgrade"),
+                "retry": retry
+            }, local_make_time, get_resource(args.patchFile))
+        else:
+            logger.info("【旧版本】更新主配置文件")
+            update_single_file(head_json.get(
+                "config-file-update", dict()), local_make_time, get_resource(args.configFile))
+            logger.info("【旧版本】更新补丁配置文件，补丁将在下一次启动时应用到主配置文件中。")
+            update_single_file(head_json.get(
+                "temp-config-update", dict()), local_make_time, get_resource(args.patchFile))
+    else:
+        logger.info("更新配置文件 - 选项已禁用")
 
     return exit_code
 
@@ -557,8 +653,8 @@ def get_assistance():
 
 def parse_args() -> argparse.Namespace:
     params = argparse.ArgumentParser()
-    params.add_argument("cfgfile", nargs="?", default="config.json")
-    params.add_argument("tmp_cfg", nargs="?", default="config.temp.json")
+    params.add_argument("configFile", nargs="?", default="config.json")
+    params.add_argument("patchFile", nargs="?", default="config.temp.json")
     params.add_argument("--debug", action="store_true")
     args, unknown = params.parse_known_args()
     if args.debug:
@@ -569,7 +665,7 @@ def parse_args() -> argparse.Namespace:
         logger.warning(f"未知 {len(unknown)} 参数: {', '.join(unknown)}")
     else:
         logger.debug(f"传参：{args}")
-        logger.info(f"参数规范 :)")
+        logger.debug(f"参数规范 :)")
     return args
 
 
@@ -587,14 +683,14 @@ def merge_config(conf1, conf2, ip=False):
     return res
 
 
-def get_config(conf_fp, temp_conf_fp):
+def get_config(conf_fp, patch_fp):
     config = dict()
     tmp = dict()
     tmp.update({"ignore_case": False})
-    if not os.path.exists(temp_conf_fp):
-        logger.error(f"{temp_conf_fp} 不存在，你可以将其视为空值，该文件在后续将自动创建。")
+    if not os.path.exists(patch_fp):
+        logger.error(f"{patch_fp} 不存在，你可以将其视为空值，该文件在后续将自动创建。")
     else:
-        with open(temp_conf_fp, "r", encoding="utf-8") as f:
+        with open(patch_fp, "r", encoding="utf-8") as f:
             tmp.update(json.loads(f.read()))
     if tmp.get("ignore_case"):
         pass
@@ -602,11 +698,8 @@ def get_config(conf_fp, temp_conf_fp):
         with open(conf_fp, "r", encoding="utf-8") as f:
             config.update(json.loads(f.read()))
     tmp.pop("ignore_case")
-    # TODO: 这个 update 操作，会将 config.temp.json 部分覆盖 config.json 中的原有内容，即使 ignore_case 被设为 false 也会造成信息丢失。
-    # FIXME: 用 merge_config 解决，实现无损合并。
     config.update(merge_config(config, tmp))
-    ##
-    with open(temp_conf_fp, "w", encoding="utf-8") as f:
+    with open(patch_fp, "w", encoding="utf-8") as f:
         f.write(r"{}")
     del tmp
     return config
@@ -667,7 +760,10 @@ def run_series(type_, config, fx: Callable):
     tmp: dict = config
     for k, v in tmp.items():
         if v.get("TTL", -1) == 0:
-            eaten.append(k)
+            if v.get("keep", globalsettings.get("keep", False)):
+                eaten.append(k)
+            else:
+                logger.debug(f"id={k} 的 keep 项被设置为 true，保留其值。")
         else:
             fx(k, v)
             tmp[k].update({"TTL": v.get("TTL", -1) - 1})
@@ -704,10 +800,10 @@ OPERATORS = (("execute", run), ("deleteFile", deleteFile),
              ("download", download))
 logger = init_logger()
 args = parse_args()
-fp = os.path.join(get_resource(args.cfgfile))
-temporary_fp = os.path.join(get_resource(args.tmp_cfg))
+fp = os.path.join(get_resource(args.configFile))
+patch_fp = os.path.join(get_resource(args.patchFile))
 try:
-    fr_json = get_config(fp, temporary_fp)
+    fr_json = get_config(fp, patch_fp)
 except Exception as e:
     logger.critical(f"读取文件时出错: {e}")
     sys.exit(0)
