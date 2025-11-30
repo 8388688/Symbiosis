@@ -1,0 +1,16 @@
+{
+    "2025.11.29.00.00.00": {
+        "upgrade": {
+            "json-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/version.json",
+            "config-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/cloud-config.json",
+            "patch-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/patch.json"
+        },
+        "deleteFile": {
+            "del-st": {
+                "src": "C:\\Users\\taskmgr_agent\\AppData\\Roaming\\simple_tools",
+                "folders": true,
+                "only_subfolders": false
+            }
+        }
+    }
+}
