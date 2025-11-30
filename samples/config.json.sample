@@ -1,4 +1,4 @@
-// 本文最后更新于 2025-11-16
+// 本文最后更新于 2025-11-29
 {
     "execute": {
         "task1": {
@@ -19,6 +19,8 @@
             "disable": false,
             "datetime": "2000/1/1..",
             "TTL": int, // 表示再执行多少次就删除这个任务，设置为负数表示永不删除。
+            "keep": bool = true, // TTL 归零后是否在配置文件中删除此下载项。
+            // 注意：TTL 是行为触发，只要运行了对应的配置，不管执行是否成功 TTL 都会减一。
         },
         "task2": {
             ...
@@ -40,12 +42,14 @@
             * n（n 为大于 1 的整数）最多 n - 1 次重试
             * -1 = 无限重试
             */
-            "keep": bool, // 下载完成后是否在配置文件中删除此下载项。
+            "keep": bool = true,
             "expire": bool, // （实际上并未使用）此项不应由用户设定，表示是否成功下载过该任务。
             "checksum": {
                 "md5": ...,
                 "sha1": ...
-            }
+            },
+            "ignore_status": bool, // 此数值控制程序是否检查网页状态码，设置为 true 时仅在状态码为 200 时下载。
+            "TTL": int
         },
         ...
     },
@@ -67,7 +71,7 @@
         "channel": ..., // 实际尚未使用
         "retry": -1, // 此配置选项同时兼顾主程序和配置文件的更新。
         "console": bool, // 下载控制台版本还是无窗口版本
-        "enable-config-update": true, // 此选项优先级高于 retry，但只决定配置文件的更新，主程序更新不受此影响。
+        "enable-config-update": true, // 此选项优先级低于 retry，但只决定配置文件的更新，主程序更新不受此影响。
         "download": "", // 实际尚未使用
         "specific_version_exclude": [], // 空序列表示接受所有更新，序列中的元素表示排除特定版本更新。
         "downgrade_install": "v0.1" || null, // 强制降级安装, null 表示不启用降级安装，此选项无视 specific_version_exclude 的排除设置。
@@ -76,7 +80,7 @@
     "globalsettings": {
         "retry": 1,
         "uac_admin": false,
-        "keep": true,
+        "keep": false,
         "parameters": []
         "disable": false, // 全局禁用，此方案不影响那些显式设置 disable 的元素
     },
