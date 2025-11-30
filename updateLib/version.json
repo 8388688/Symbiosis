@@ -22,7 +22,8 @@
         "v1.3.2.1": "https://github.com/8388688/Symbiosis/releases/download/v1.3.2.1/Symbiosis.exe",
         "v1.4": "https://github.com/8388688/Symbiosis/releases/download/v1.4/Symbiosis.exe",
         "v1.4.1": "https://github.com/8388688/Symbiosis/releases/download/v1.4.1/Symbiosis.exe",
-        "v1.4.2": "https://github.com/8388688/Symbiosis/releases/download/v1.4.2/Symbiosis.exe"
+        "v1.4.2": "https://github.com/8388688/Symbiosis/releases/download/v1.4.2/Symbiosis.exe",
+        "v1.5": "https://github.com/8388688/Symbiosis/releases/download/v1.5/Symbiosis.exe"
     },
     "symbiosis-update-con": {
         "v0.3.0": "https://github.com/8388688/Symbiosis/releases/download/v0.3.0/Symbiosis_console.exe",
@@ -39,7 +40,8 @@
         "v1.3.2.1": "https://github.com/8388688/Symbiosis/releases/download/v1.3.2.1/Symbiosis_console.exe",
         "v1.4": "https://github.com/8388688/Symbiosis/releases/download/v1.4/Symbiosis_console.exe",
         "v1.4.1": "https://github.com/8388688/Symbiosis/releases/download/v1.4.1/Symbiosis_console.exe",
-        "v1.4.2": "https://github.com/8388688/Symbiosis/releases/download/v1.4.2/Symbiosis_console.exe"
+        "v1.4.2": "https://github.com/8388688/Symbiosis/releases/download/v1.4.2/Symbiosis_console.exe",
+        "v1.5": "https://github.com/8388688/Symbiosis/releases/download/v1.5/Symbiosis_console.exe"
     },
     "checksum-sha256-win": {
         "v1.2.2": "57b86a87d44aa7f9da242e00eae228c7dbeda4c0f01e30626cf511f17e866e73",
