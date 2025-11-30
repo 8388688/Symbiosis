@@ -21,7 +21,8 @@
         "v1.3.2": "https://github.com/8388688/Symbiosis/releases/download/v1.3.2/Symbiosis.exe",
         "v1.3.2.1": "https://github.com/8388688/Symbiosis/releases/download/v1.3.2.1/Symbiosis.exe",
         "v1.4": "https://github.com/8388688/Symbiosis/releases/download/v1.4/Symbiosis.exe",
-        "v1.4.1": "https://github.com/8388688/Symbiosis/releases/download/v1.4.1/Symbiosis.exe"
+        "v1.4.1": "https://github.com/8388688/Symbiosis/releases/download/v1.4.1/Symbiosis.exe",
+        "v1.4.2": "https://github.com/8388688/Symbiosis/releases/download/v1.4.2/Symbiosis.exe"
     },
     "symbiosis-update-con": {
         "v0.3.0": "https://github.com/8388688/Symbiosis/releases/download/v0.3.0/Symbiosis_console.exe",
@@ -37,7 +38,8 @@
         "v1.3.2": "https://github.com/8388688/Symbiosis/releases/download/v1.3.2/Symbiosis_console.exe",
         "v1.3.2.1": "https://github.com/8388688/Symbiosis/releases/download/v1.3.2.1/Symbiosis_console.exe",
         "v1.4": "https://github.com/8388688/Symbiosis/releases/download/v1.4/Symbiosis_console.exe",
-        "v1.4.1": "https://github.com/8388688/Symbiosis/releases/download/v1.4.1/Symbiosis_console.exe"
+        "v1.4.1": "https://github.com/8388688/Symbiosis/releases/download/v1.4.1/Symbiosis_console.exe",
+        "v1.4.2": "https://github.com/8388688/Symbiosis/releases/download/v1.4.2/Symbiosis_console.exe"
     },
     "checksum-sha256-win": {
         "v1.2.2": "57b86a87d44aa7f9da242e00eae228c7dbeda4c0f01e30626cf511f17e866e73",
@@ -48,7 +50,8 @@
         "v1.3.2": "041d6e6719c8ebc9de5b3cd1c43ab90b108ff7a7bf6c3ce15027348f206fdc02",
         "v1.3.2.1": "e3b1566d5bf7a1c24782d157b19b1007ef5282d0f054e99b1f37482363a3c549",
         "v1.4": "da1db02fc79e58489de31ad3f67719fa36a18ef6a95820edf2b89ec01f5d3f8e",
-        "v1.4.1": "58599eaec449935e2429aa0ad2d55a797acc5c4e009937d0aae9cba6ef62d23a"
+        "v1.4.1": "58599eaec449935e2429aa0ad2d55a797acc5c4e009937d0aae9cba6ef62d23a",
+        "v1.4.2": "a99f61c183a4086a1f4327d94ae7bedf6a4615c38a65fba919bb83f4c8ac2513"
     },
     "checksum-sha256-con": {
         "v1.2.2": "7b7d4c544c782ee0c9962d400785994a587799e373e6bc12a82fb17aa4ab1927",
@@ -59,7 +62,8 @@
         "v1.3.2": "df1105427441e2f1b75c3d74548410dbb76ee86dcfcf1ccd92747fe5c388a1a1",
         "v1.3.2.1": "fb7e4d275564cd9a39f612888c4122c462336f3089c432134d1940c71fe34b85",
         "v1.4": "60824c1c22abfba3bc0fd32ea4ca5657d77e35cbaa364d828de09b942b7dda65",
-        "v1.4.1": "56589b40c7404aabc8ce9c0a5b8720a31e3a32b18a6b1d53cb84d8e0ee27f67c"
+        "v1.4.1": "56589b40c7404aabc8ce9c0a5b8720a31e3a32b18a6b1d53cb84d8e0ee27f67c",
+        "v1.4.2": "c422595dab5a046755c2ef20e7c7a170902aa35f3cb92fb5947961c3be25c46f"
     },
     "update-14pp": {
         "v1.4.1": {
@@ -67,7 +71,14 @@
             "url-con": "https://github.com/8388688/Symbiosis/releases/download/v1.4.1/Symbiosis_console.exe",
             "sha256-win": "58599eaec449935e2429aa0ad2d55a797acc5c4e009937d0aae9cba6ef62d23a",
             "sha256-con": "56589b40c7404aabc8ce9c0a5b8720a31e3a32b18a6b1d53cb84d8e0ee27f67c",
-            "enable-config-update": null
+            "enable-config-update": true
+        },
+        "v1.4.2": {
+            "url-win": "https://github.com/8388688/Symbiosis/releases/download/v1.4.2/Symbiosis.exe",
+            "url-con": "https://github.com/8388688/Symbiosis/releases/download/v1.4.2/Symbiosis_console.exe",
+            "sha256-win": "a99f61c183a4086a1f4327d94ae7bedf6a4615c38a65fba919bb83f4c8ac2513",
+            "sha256-con": "c422595dab5a046755c2ef20e7c7a170902aa35f3cb92fb5947961c3be25c46f",
+            "enable-config-update": true
         }
     },
     "config-file-update": {
