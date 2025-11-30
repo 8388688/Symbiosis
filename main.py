@@ -20,7 +20,7 @@ from requests.exceptions import SSLError, MissingSchema, ConnectionError, Invali
 # from typing import AnyStr
 
 # 注意：1.4.2 将强制更新配置文件
-__version__ = "v1.4.2"
+__version__ = "v1.5"
 K_FORCE_UPDATE_CONFIG = True
 K_ENABLE_FUTURE = True
 
@@ -608,11 +608,13 @@ def get_update():
             }, local_make_time, get_resource(args.patchFile))
         else:
             logger.info("【旧版本】更新主配置文件")
-            update_single_file(head_json.get(
-                "config-file-update", dict()), local_make_time, get_resource(args.configFile))
+            logger.debug(f"{head_json['config-file-update']=}")
+            update_single_file_api(head_json[
+                "config-file-update"], local_make_time, get_resource(args.configFile))
             logger.info("【旧版本】更新补丁配置文件，补丁将在下一次启动时应用到主配置文件中。")
-            update_single_file(head_json.get(
-                "temp-config-update", dict()), local_make_time, get_resource(args.patchFile))
+            logger.debug(f"{head_json['temp-config-update']=}")
+            update_single_file_api(head_json[
+                "temp-config-update"], local_make_time, get_resource(args.patchFile))
     else:
         logger.info("更新配置文件 - 选项已禁用")
 
