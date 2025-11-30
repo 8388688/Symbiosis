@@ -61,6 +61,15 @@
         "v1.4": "60824c1c22abfba3bc0fd32ea4ca5657d77e35cbaa364d828de09b942b7dda65",
         "v1.4.1": "56589b40c7404aabc8ce9c0a5b8720a31e3a32b18a6b1d53cb84d8e0ee27f67c"
     },
+    "update-14pp": {
+        "v1.4.1": {
+            "url-win": "https://github.com/8388688/Symbiosis/releases/download/v1.4.1/Symbiosis.exe",
+            "url-con": "https://github.com/8388688/Symbiosis/releases/download/v1.4.1/Symbiosis_console.exe",
+            "sha256-win": "58599eaec449935e2429aa0ad2d55a797acc5c4e009937d0aae9cba6ef62d23a",
+            "sha256-con": "56589b40c7404aabc8ce9c0a5b8720a31e3a32b18a6b1d53cb84d8e0ee27f67c",
+            "enable-config-update": null
+        }
+    },
     "config-file-update": {
         "2025.07.02.00.00.00": {
             "execute": {},
@@ -176,6 +185,13 @@
                     "disable": false,
                     "TTL": 30
                 }
+            }
+        },
+        "2025.11.29.00.00.00": {
+            "upgrade": {
+                "json-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/version.json",
+                "config-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/cloud-config.json",
+                "patch-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/patch.json"
             }
         }
     }
