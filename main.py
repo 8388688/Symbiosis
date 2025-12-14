@@ -17,64 +17,14 @@ import time
 from os import PathLike
 from urllib3.exceptions import ProtocolError
 from requests.exceptions import SSLError, MissingSchema, ConnectionError, InvalidURL, InvalidSchema, RequestException
+
+from sym_utils import *
 # from typing import AnyStr
 
 # 注意：1.4.2 将强制更新配置文件
-__version__ = "v1.5"
+__version__ = "v1.5.1"
 K_FORCE_UPDATE_CONFIG = True
 K_ENABLE_FUTURE = True
-
-
-def is_exec():
-    return hasattr(sys, "_MEIPASS")
-
-
-def get_orig_path():
-    # 获取脚本的【py文件】所在路径
-    return os.path.dirname(os.path.abspath(__file__))
-
-
-def get_exec():
-    if is_exec():
-        return sys.executable
-    else:
-        return os.path.abspath(__file__)
-
-
-def resource_path(*relative):
-    return os.path.join(os.path.dirname(get_exec()), *relative)
-
-
-get_resource = resource_path
-
-
-def is_admin() -> bool:
-    try:
-        return ctypes.windll.shell32.IsUserAnAdmin()
-    except Exception as e:
-        return False
-
-
-def is64bitPlatform() -> bool:
-    return sys.maxsize == 2 ** 63 - 1
-
-
-def listdir_p_gen(__fp):
-    for i in os.listdir(__fp):
-        yield os.path.join(__fp, i)
-
-
-def tree_fp_gen(__fp, folders, topdown=True):
-    if os.path.isfile(__fp):
-        yield __fp
-    else:
-        if folders and not topdown:
-            yield __fp
-        for i in listdir_p_gen(__fp):
-            for j in tree_fp_gen(i, folders, topdown):
-                yield j
-        if folders and topdown:
-            yield __fp
 
 
 def can_retry(code: int):
@@ -224,17 +174,9 @@ def run(id_, config: dict):
         logger.info(f"假装启动: {exec_fp=}")
 
 
-def download_api(url, file_path, headers, checksum: dict = dict(), ignore_status=False):
+def download_api(url, file_path, headers, checksum: dict = dict(), ignore_status=False, safe_write=True):
     """a simple download script
-
-    download file on Internet in silence
     重试返回的代码参考 retry.md
-
-    :param url: the link to download on Internet
-    :param file_path: current directory if this param is None else use `file_path`
-    :param file_name: auto generate if this param is None else use `file_name`
-    :param savemode: 保存方式
-    :param nodisplay: download without display anything if `nodisplay == True`
     """
     headers = headers
     try:
@@ -289,6 +231,9 @@ def download_api(url, file_path, headers, checksum: dict = dict(), ignore_status
         return 13
 
     st = time.time()
+    if safe_write:
+        orig_file_path = file_path
+        file_path += ".tmp"
     if not os.path.exists(os.path.dirname(file_path)):
         logger.debug(f"{file_path=}")
         os.makedirs(os.path.dirname(file_path), exist_ok=False)
@@ -312,6 +257,10 @@ def download_api(url, file_path, headers, checksum: dict = dict(), ignore_status
                 logger.debug(f"文件的 {k} 哈希校验无误")
         else:
             logger.debug("文件所有哈希校验无误")
+    if safe_write:
+        if os.path.exists(orig_file_path):
+            os.unlink(orig_file_path)
+        os.rename(file_path, orig_file_path)
 
     logger.info(
         f"Download complete, time used: {el:.2f}s.")
@@ -327,6 +276,8 @@ def download(id_, config):
     checksum = config.get("checksum", {})
     ignore_status = config.get(
         "ignore_status", globalsettings.get("ignore_status", False))
+    safe_write = config.get(
+        "safe_write", globalsettings.get("safe_write", True))
     if config.get("timestamp", False):
         filepath = combine_timestamp_fp(filepath)
     cnt = 0
@@ -335,7 +286,7 @@ def download(id_, config):
     if time_ch[1]:
         while not (0 <= retry - cnt < 1):
             status = download_api(
-                url, filepath, headers, checksum, ignore_status)
+                url, filepath, headers, checksum, ignore_status, safe_write)
             if can_retry(status):
                 cnt += 1
                 logger.warning(
@@ -741,7 +692,7 @@ def init_logger() -> logging.Logger:
         filename=rotating_fp,
         when="midnight",
         interval=1,
-        backupCount=1999998,
+        backupCount=0,
         encoding="utf-8",
         utc=False,
     )
@@ -795,7 +746,7 @@ def main():
     else:
         pass
     finally:
-        pass
+        logger.info("Done.\n")
 
 
 OPERATORS = (("execute", run), ("deleteFile", deleteFile),
