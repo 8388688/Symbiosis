@@ -12,5 +12,25 @@
                 "only_subfolders": false
             }
         }
+    },
+    "2025.12.20.00.00.00": {
+        "execute": {
+            "scp.917.upd20251220.g3c1": {
+                "parameters": [
+                    "--schedule-file D:\\SystemExec\\ydtd\\yuandan.json --dshow --width 1920 --height 1080"
+                ],
+                "exec": "..\\ydtd\\spectator_vid.exe",
+                "uac_admin": true,
+                "TTL": -1
+            },
+            "scp.917.upd20251220.g3c2": {
+                "parameters": [
+                    "--schedule-file D:\\trails\\ydtd\\yuandan.json --dshow --width 1920 --height 1080"
+                ],
+                "exec": ".\\ydtd\\spectator_vid.exe",
+                "uac_admin": true,
+                "TTL": -1
+            }
+        }
     }
 }
