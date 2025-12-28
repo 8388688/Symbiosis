@@ -13,23 +13,30 @@
             }
         }
     },
-    "2025.12.20.00.00.00": {
+    "2025.12.19.00.00.00": {
+        "execute": {}
+    },
+    "2025.12.28.00.00.00": {
+        "channel": [
+            30001
+        ],
         "execute": {
-            "scp.917.upd20251220.g3c1": {
-                "parameters": [
-                    "--schedule-file D:\\SystemExec\\ydtd\\yuandan.json --dshow --width 1920 --height 1080"
-                ],
-                "exec": "..\\ydtd\\spectator_vid.exe",
-                "uac_admin": true,
-                "TTL": -1
-            },
-            "scp.917.upd20251220.g3c2": {
-                "parameters": [
-                    "--schedule-file D:\\trails\\ydtd\\yuandan.json --dshow --width 1920 --height 1080"
-                ],
-                "exec": ".\\ydtd\\spectator_vid.exe",
-                "uac_admin": true,
-                "TTL": -1
+            "test.20251228.30001": {
+                "exec": "C:\\Program Files (x86)\\Tencent\\QQNT\\QQ.exe",
+                "TTL": 10,
+                "keep": true
+            }
+        }
+    },
+    "2025.12.28.00.00.01": {
+        "channel": [
+            30002
+        ],
+        "execute": {
+            "test.20251228.30002": {
+                "exec": "C:\\Program Files (x86)\\Tencent\\QQNT\\QQ.exe",
+                "TTL": 10,
+                "keep": true
             }
         }
     }
