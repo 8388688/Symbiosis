@@ -18,13 +18,15 @@ from os import PathLike
 from urllib3.exceptions import ProtocolError
 from requests.exceptions import SSLError, MissingSchema, ConnectionError, InvalidURL, InvalidSchema, RequestException
 
+from sym_ops import *
 from sym_utils import *
 # from typing import AnyStr
 
 # 注意：1.4.2 将强制更新配置文件
-__version__ = "v1.5.1"
+__version__ = "v1.5.2"
 K_FORCE_UPDATE_CONFIG = True
 K_ENABLE_FUTURE = True
+# eraser\Eraserl.exe -folder \Temp\0 -subfolders -keepfolder -method "Gutmann" -silent
 
 
 def can_retry(code: int):
@@ -68,12 +70,6 @@ def decode_config_time_version(version_str: str | int):
     return ver_time
 
 
-def decode_datetime(date_str: str):
-    return time.mktime(time.strptime(
-        date_str, "%Y/%m/%d"
-    ))
-
-
 def combine_timestamp_fp(fp):
     tmp = os.path.splitext(fp)
     ch = 0
@@ -90,13 +86,6 @@ def check_attributes(attr):
     for i in dir(attr):
         result.update({i: getattr(attr, i)})
     return result
-
-
-def check_time(time_str):
-    return re.search(
-        r"(\d+\/\d+\/\d+)?\s*\.\.\s*(\d+\/\d+\/\d+)?",
-        time_str, re.I
-    )
 
 
 def check_time_can_do(config):
@@ -327,6 +316,7 @@ def deleteFile(id_, config):
                 tot_file += 1
             else:
                 if not only_subfolder or i != fp:
+                    os.chmod(i, 0o777)
                     os.rmdir(i)
                     logger.debug(f"del dir: {i}")
                     tot_dir += 1
@@ -343,7 +333,7 @@ def deleteFile(id_, config):
         logger.info(f"总计删除 {tot_size} 字节，{tot_file} 个文件，{tot_dir} 个文件夹。")
 
 
-def update_single_file_api(config: dict, local_make_time, save_path):
+def update_single_file_api(config: dict, local_make_time, save_path, channel):
     old_file_fp = save_path + ".orig"
     upgrade_content = []
     logger.debug(f"{config=}, {save_path=}")
@@ -351,7 +341,12 @@ def update_single_file_api(config: dict, local_make_time, save_path):
         if local_make_time == 0:
             logger.warning(
                 f"make-time 键值对未设置，Symbiosis 将默认为您填入缺省参数 {local_make_time}")
-        if decode_config_time_version(k) > decode_config_time_version(local_make_time):
+        if "channel" not in v.keys():
+            logger.warning(f"远程配置 {k} 的 channel 未设置，Symbiosis 将默认其为全版本更新的补丁")
+            remote_channel = []
+        else:
+            remote_channel = v.get("channel")
+        if decode_config_time_version(k) > decode_config_time_version(local_make_time) and (not remote_channel or channel in remote_channel):
             upgrade_content.append([k, v])
     upgrade_content.sort(
         key=lambda x: decode_config_time_version(x[0]), reverse=True)
@@ -372,7 +367,7 @@ def update_single_file_api(config: dict, local_make_time, save_path):
         logger.info("没有更新可用")
 
 
-def update_single_file(id_, dl_config: dict, local_make_time, save_path):
+def update_single_file(id_, dl_config: dict, local_make_time, save_path, channel):
     # dl_config 中的 filepath 为保存临时下载的路径
     # save_path 为更新的目标路径
     dl_config.update({"timestamp": False})
@@ -381,7 +376,8 @@ def update_single_file(id_, dl_config: dict, local_make_time, save_path):
     if ex_code == 0:
         with open(dl_config.get("filepath"), "rb") as f:
             tmp = json.loads(f.read())
-        exit_code = update_single_file_api(tmp, local_make_time, save_path)
+        exit_code = update_single_file_api(
+            tmp, local_make_time, save_path, channel)
         logger.debug(f"delete: {dl_config.get('filepath')}")
         os.unlink(dl_config.get("filepath"))
         return exit_code
@@ -549,14 +545,17 @@ def get_update():
                 "url": fr_json["upgrade"]["config-url"],
                 "filepath": resource_path(args.configFile + ".upgrade"),
                 "retry": retry
-            }, local_make_time, get_resource(args.configFile))
+            }, local_make_time, get_resource(args.configFile), channel=0)
             #######
             logger.info("更新补丁配置文件，补丁将在下一次启动时应用到主配置文件中。")
             update_single_file("patchFile.up", {
                 "url": fr_json["upgrade"]["patch-url"],
                 "filepath": resource_path(args.patchFile + ".upgrade"),
                 "retry": retry
-            }, local_make_time, get_resource(args.patchFile))
+            }, local_make_time, get_resource(args.patchFile),
+                fr_json["upgrade"].get(
+                    "channel", fr_json["upgrade"].get("channel2", 0))
+            )
         else:
             logger.info("【旧版本】更新主配置文件")
             logger.debug(f"{head_json['config-file-update']=}")
@@ -620,20 +619,6 @@ def parse_args() -> argparse.Namespace:
         logger.debug(f"传参：{args}")
         logger.debug(f"参数规范 :)")
     return args
-
-
-def merge_config(conf1, conf2, ip=False):
-    # conf1 <-- conf2
-    res = conf1.copy()
-    for k, v in conf2.items():
-        if k in res.keys() and isinstance(v, Mapping):
-            res[k].update(merge_config(res[k], v))
-        else:
-            res.update({k: v})
-    if ip:
-        conf1.clear()
-        conf1.update(res)
-    return res
 
 
 def get_config(conf_fp, patch_fp):
@@ -742,7 +727,7 @@ def main():
         logger.critical("exception_type: \t%s" % exc_type)
         logger.critical("exception_value: \t%s" % exc_value)
         logger.critical("exception_object: \t%s" % exc_obj)
-        logger.critical(f"======= FULL EXCEPTION =======\n{format_exc()}")
+        logger.critical(f"======= FULL EXCEPTION =======\n{format_exc()}\n")
     else:
         pass
     finally:
