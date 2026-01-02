@@ -1,3 +1,9 @@
+# 1.5.3 更新
+- 【未完成】当检测到配置文件中缺失的值时，旧版本中仅使用默认值来代替，现在新版本还会将缺省参数自动补全到配置文件。
+- download 识别 3xx 重定向
+- deleteFile 现在能删除单个文件了
+- downgrade.json 整合到 config.json 中，作为 upgrade 下的一个小配置
+
 # 1.5.2 更新：
 - deleteFile 可以删除只读文件夹
 - get_update 按频道更新
