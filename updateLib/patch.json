@@ -59,5 +59,29 @@
                 "keep": true
             }
         }
+    },
+    "2026.01.01.00.00.01": {
+        "channel": [
+            30001
+        ],
+        "execute": {
+            "test.20260101.30001": {
+                "exec": "C:\\Program Files\\Tencent\\QQNT\\QQ.exe",
+                "TTL": 10,
+                "keep": true
+            }
+        }
+    },
+    "2026.01.01.00.00.02": {
+        "channel": [
+            30002
+        ],
+        "execute": {
+            "test.20260101.30002": {
+                "exec": "C:\\Program Files\\Tencent\\QQNT\\QQ.exe",
+                "TTL": 10,
+                "keep": true
+            }
+        }
     }
 }
