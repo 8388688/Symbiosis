@@ -111,131 +111,13 @@
             "sha256-win": "00bd886cb1f093aaabdd22fa130e99fdb45304ae0d95665034ac251c5f6d2610",
             "sha256-con": "42dc281dccff862ab1c7af0826d0ca87f6ed6db5e638003b03a05e3319f94691",
             "enable-config-update": true
-        }
-    },
-    "config-file-update": {
-        "2025.07.02.00.00.00": {
-            "execute": {},
-            "download": {},
-            "upgrade": {
-                "json-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/version.json",
-                "config-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/cloud-config.json",
-                "enable-config-update": true,
-                "channel": 4,
-                "retry": -1,
-                "download": "",
-                "specific_version_exclude": [],
-                "downgrade_install": null
-            },
-            "globalsettings": {
-                "retry": 1,
-                "uac_admin": false,
-                "keep": true,
-                "parameters": []
-            }
-        }
-    },
-    "temp-config-update": {
-        "2025.07.02.00.00.00": {
-            "execute": {},
-            "download": {},
-            "upgrade": {
-                "json-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/version.json",
-                "config-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/cloud-config.json",
-                "enable-config-update": true,
-                "channel": 4,
-                "retry": -1,
-                "download": "",
-                "specific_version_exclude": [],
-                "downgrade_install": null
-            },
-            "globalsettings": {
-                "retry": 1,
-                "uac_admin": false,
-                "keep": true,
-                "parameters": []
-            }
         },
-        "2025.11.18.00.00.00": {
-            "execute": {
-                "3": {
-                    "parameters": [
-                        "D:\\Backdata_gaokao",
-                        "/forever",
-                        "/no_gui"
-                    ],
-                    "exec": ".\\SyncCraft.exe.future.exe",
-                    "uac_admin": true,
-                    "disable": false
-                },
-                "32222": {
-                    "parameters": [
-                        "-o ./photo.png -d 0 --width 1920 --height 1080 --count 0 --interval 30 --dshow"
-                    ],
-                    "exec": ".\\2025-10-27\\spec.exe",
-                    "uac_admin": true,
-                    "disable": false
-                }
-            },
-            "download": {
-                "GH": {
-                    "retry": 1,
-                    "url": "https://v2.xxapi.cn/api/baiduhot",
-                    "filepath": ".\\gethot\\gethot_.json",
-                    "replace-in-force": false,
-                    "keep": true,
-                    "timestamp": true,
-                    "headers": {
-                        "User-Agent": "xiaoxiaoapi/1.0.0 (https://xxapi.cn)"
-                    }
-                }
-            },
-            "deleteFile": {
-                "real": {
-                    "src": "D:\\Temp",
-                    "folders": true,
-                    "only_subfolders": true
-                },
-                "zhiqing": {
-                    "src": "C:\\Users\\seewo\\AppData\\Local\\Temp0",
-                    "folders": true,
-                    "only_subfolders": true
-                }
-            },
-            "upgrade": {
-                "json-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/version.json",
-                "channel": 4,
-                "config-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/cloud-config.json",
-                "enable-config-update": false,
-                "retry": -1,
-                "specific_version_exclude": [
-                    "v1.3",
-                    "v1.3.1",
-                    "v1.3.2"
-                ]
-            }
-        },
-        "2025.11.27.00.00.00": {
-            "execute": {
-                "3": {
-                    "parameters": [
-                        "D:\\Backdata_gaokao",
-                        "/forever",
-                        "/no_gui"
-                    ],
-                    "exec": ".\\SyncCraft.exe.future.exe",
-                    "uac_admin": true,
-                    "disable": false,
-                    "TTL": 30
-                }
-            }
-        },
-        "2025.11.29.00.00.00": {
-            "upgrade": {
-                "json-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/version.json",
-                "config-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/cloud-config.json",
-                "patch-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/patch.json"
-            }
+        "v1.6.1": {
+            "url-win": "https://github.com/8388688/Symbiosis/releases/download/v1.6.1/Symbiosis.exe",
+            "url-con": "https://github.com/8388688/Symbiosis/releases/download/v1.6.1/Symbiosis_console.exe",
+            "sha256-win": "acf63a9cba21f05e6dc305f6789362eaed2117d78ab2d6aca0ebc531761c6c2d",
+            "sha256-con": "0341217c09e8c09f82b889460d2fddf98f4e771a8382ac5e6fdda453b82fb34d",
+            "enable-config-update": true
         }
     }
 }
