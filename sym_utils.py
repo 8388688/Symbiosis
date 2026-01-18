@@ -6,7 +6,7 @@ from typing import Mapping
 __all__ = [
     "is_exec", "get_orig_path", "get_exec", "resource_path", "get_resource",
     "is_admin", "is64bitPlatform", "listdir_p_gen", "tree_fp_gen",
-    "merge_config"
+    "merge_config", "ConfigReader"
 ]
 
 
@@ -74,3 +74,70 @@ def merge_config(conf1, conf2, ip=False):
         conf1.clear()
         conf1.update(res)
     return res
+
+
+class ConfigReader:
+    """统一的配置读取工具
+
+    优先级：
+    1. 从 config 参数中读取
+    2. 从 global_settings 中读取
+    3. 使用内置缺省参数
+    """
+
+    def __init__(self, global_settings: dict = None):
+        """初始化配置读取器
+
+        Args:
+            global_settings: 全局设置字典
+        """
+        self.global_settings = global_settings or {}
+
+    def get(self, config: dict, key: str, default=None):
+        """读取配置值
+
+        Args:
+            config: 本地配置字典
+            key: 配置键
+            default: 内置缺省参数
+
+        Returns:
+            配置值，优先级：config > global_settings > default
+        """
+        # 首先从 config 中读取
+        if key in config:
+            value = config.get(key)
+            if value is not None:
+                return value
+
+        # 其次从 global_settings 中读取
+        if key in self.global_settings:
+            value = self.global_settings.get(key)
+            if value is not None:
+                return value
+
+        # 最后使用缺省参数
+        return default
+
+    def get_multi(self, config: dict, keys: dict) -> dict:
+        """批量读取配置值
+
+        Args:
+            config: 本地配置字典
+            keys: {配置键: 缺省值} 的字典
+
+        Returns:
+            {配置键: 配置值} 的字典
+        """
+        result = {}
+        for key, default in keys.items():
+            result[key] = self.get(config, key, default)
+        return result
+
+    def update_global_settings(self, global_settings: dict):
+        """更新全局设置
+
+        Args:
+            global_settings: 新的全局设置字典
+        """
+        self.global_settings = global_settings or {}

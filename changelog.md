@@ -1,3 +1,15 @@
+# v1.6 更新
+*此版本部分代码使用了 Github Copilot 辅助设计*
+
+**【破坏性更新】此更新影响降级更新**
+- downgrade.json 已经被整合到主配置文件中，后续版本将不再识别 downgrade.json 文件。
+
+## 通用更新
+精简并优化部分代码。
+
+## userdata
+将 lastrun_version 和 channel 移至 userdata 中。
+
 # 1.5.3 更新
 - 【未完成】当检测到配置文件中缺失的值时，旧版本中仅使用默认值来代替，现在新版本还会将缺省参数自动补全到配置文件。
 - download 识别 3xx 重定向
