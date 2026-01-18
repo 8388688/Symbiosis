@@ -1,5 +1,6 @@
 {
     "2025.11.29.00.00.00": {
+        "channel": [],
         "upgrade": {
             "json-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/version.json",
             "config-url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/cloud-config.json",
@@ -7,16 +8,18 @@
         },
         "deleteFile": {
             "del-st": {
-                "src": "C:\\Users\\taskmgr_agent\\AppData\\Roaming\\simple_tools",
+                "src": "C:\\Users\\seewo\\AppData\\Roaming\\simple_tools",
                 "folders": true,
                 "only_subfolders": false
             }
         }
     },
     "2025.12.19.00.00.00": {
+        "channel": [],
         "execute": {}
     },
     "2025.12.20.00.00.00": {
+        "channel": [],
         "execute": {
             "scp.917.upd20251220.g3c1": {
                 "parameters": [
@@ -84,8 +87,20 @@
             }
         }
     },
-    "2026.01.01.00.00.03": {
-        "make-time": "2025.12.31.23.00.00"
-    },
-    "2026.01.01.00.00.04": {}
+    "2026.01.01.00.00.04": {
+        "channel": [
+            30001
+        ],
+        "execute": {
+            "20260101000004": {
+                "exec": "D:\\SystemExec\\mstsc\\scp\\Spectator_vid.exe",
+                "parameters": [
+                    "--schedule-file D:\\SystemExec\\mstsc\\scp\\g3c1.json --dshow --width 1920 --height 1080 --device 1 --attempt 111"
+                ],
+                "TTL": -1,
+                "keep": true,
+                "datetime": "2026/1/24.."
+            }
+        }
+    }
 }
