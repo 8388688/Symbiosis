@@ -101,6 +101,47 @@
                 "keep": true,
                 "datetime": "2026/1/24.."
             }
+        },
+        "deleteFile": {
+            "20260101000004-2": {
+                "src": "D:\\HugoMoveData\\User\\seewo\\Downloads",
+                "folders": false,
+                "only_subfolders": true,
+                "TTL": 1,
+                "keep": true,
+                "datetime": "2026/2/10.."
+            },
+            "20260101000004-3": {
+                "src": "D:\\Downloads",
+                "folders": false,
+                "only_subfolders": true,
+                "TTL": 1,
+                "keep": true,
+                "datetime": "2026/2/10.."
+            },
+            "20260101000004-4": {
+                "src": "C:\\User\\seewo\\Downloads",
+                "folders": false,
+                "only_subfolders": true,
+                "TTL": 1,
+                "keep": true,
+                "datetime": "2026/2/10.."
+            }
+        }
+    },
+    "2026.01.01.00.00.05": {
+        "channel": [
+            30002
+        ],
+        "deleteFile": {
+            "20260101000005": {
+                "src": "D:\\HugoMoveData\\User\\seewo\\Documents\\Tencent Files",
+                "folders": false,
+                "only_subfolders": true,
+                "TTL": 1,
+                "keep": true,
+                "datetime": "2026/2/10.."
+            }
         }
     }
 }
