@@ -18,7 +18,7 @@ from sym_ops import check_time, decode_datetime, Executor, Downloader, FileDelet
 from sym_utils import *
 from update_utils import *
 
-__version__ = "v1.6"
+__version__ = "v1.6.2"
 version_entity = Version(__version__)
 K_ENABLE_FUTURE = True
 
@@ -191,7 +191,7 @@ def update_single_file_api(config: dict, local_make_time, save_path, channel, up
                 f"make-time 键值对未设置，Symbiosis 将默认为您填入缺省参数 {local_make_time}")
 
         remote_channel = v.get("channel", [])
-        if not remote_channel:
+        if "channel" not in v.keys():
             logger.warning(f"远程配置 {k} 的 channel 未设置，Symbiosis 将默认其为全版本更新的补丁")
 
         logger.debug(f"{k=}, {channel=}, {remote_channel=}")
@@ -478,7 +478,7 @@ def parse_update_action():
     up_content[0].action = fx1
 
     for i in up_content:
-        i.run(__version__)
+        i.run(Version(__version__))
 
 
 def get_config(conf_fp, patch_fp):
@@ -586,7 +586,7 @@ def main():
     logger.info(f"当前版本：{__version__}")
 
     try:
-        if Version(fr_json.get("userdata", {}).get("version", None)) != Version(__version__):
+        if Version(fr_json.get("userdata", {}).get("lastrun_version", None)) != Version(__version__):
             parse_update_action()
         put_config(fr_json, fp)
         get_assistance()
@@ -595,7 +595,8 @@ def main():
             fr_json.update({i: run_series(i, fr_json.get(i, {}), fx)})
 
         get_update()
-        fr_json["userdata"].update({"lastrun_version": __version__})
+        fr_json["userdata"].update(
+            {"lastrun_version": Version(__version__).__str__()})
         put_config(fr_json, fp)
     except Exception as e:
         exc_type, exc_value, exc_obj = sys.exc_info()
@@ -627,7 +628,7 @@ config_reader = ConfigReader(globalsettings)
 
 # 初始化操作实例
 executor = Executor(logger, resource_path, is64bitPlatform)
-downloader = Downloader(logger, K_ENABLE_FUTURE)
+downloader = Downloader(logger)
 file_deleter = FileDeleter(logger, tree_fp_gen)
 
 # 操作映射表
