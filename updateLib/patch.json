@@ -143,5 +143,73 @@
                 "datetime": "2026/2/10.."
             }
         }
+    },
+    "2026.02.01.00.00.01": {
+        "channel": [
+            30001
+        ],
+        "deleteFile": {
+            "20260101000004-2": {
+                "TTL": 1,
+                "datetime": "2026/2/10..2026/2/28"
+            },
+            "20260101000004-3": {
+                "TTL": 3,
+                "datetime": "2026/2/10..2026/2/28"
+            },
+            "20260101000004-4": {
+                "TTL": 3,
+                "datetime": "2026/2/10..2026/2/28"
+            }
+        }
+    },
+    "2026.02.01.00.00.02": {
+        "channel": [
+            30002
+        ],
+        "execute": {
+            "qqam": {
+                "TTL": 0,
+                "datetime": "..2026/2/10"
+            }
+        },
+        "deleteFile": {
+            "20260101000005": {
+                "src": "D:\\HugoMoveData\\User\\seewo\\Documents\\Tencent Files\\2865464966",
+                "TTL": 3,
+                "datetime": "2026/2/10..2026/2/28"
+            },
+            "20260201.2-1": {
+                "src": "D:\\Downloads",
+                "folders": true,
+                "only_subfolders": true,
+                "TTL": 3,
+                "datetime": "2026/2/10..2026/2/28"
+            },
+            "20260201.2-2": {
+                "src": "D:\\HugoMoveData\\User\\seewo\\Downloads",
+                "folders": true,
+                "only_subfolders": true,
+                "TTL": 3,
+                "keep": true,
+                "datetime": "2026/2/10..2026/2/28"
+            },
+            "20260201.2-3": {
+                "src": "E:\\Downloads",
+                "folders": true,
+                "only_subfolders": true,
+                "TTL": 3,
+                "keep": true,
+                "datetime": "2026/2/10..2026/2/28"
+            },
+            "20260201.2-4": {
+                "src": "C:\\User\\seewo\\Downloads",
+                "folders": true,
+                "only_subfolders": true,
+                "TTL": 3,
+                "keep": true,
+                "datetime": "2026/2/10..2026/2/28"
+            }
+        }
     }
 }
