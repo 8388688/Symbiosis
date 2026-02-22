@@ -1,6 +1,6 @@
 from typing import Callable
 
-__all__ = ["Version", "UpgradeSlice", "update_content"]
+__all__ = ["Version", "UpgradeSlice"]
 
 
 class Version(tuple):
@@ -99,9 +99,6 @@ def test_case():
     print(Version((1, 2)) < Version((1, 2, 0, 1)))  # T
 
     print("All test cases passed.")
-
-
-update_content: list[UpgradeSlice] = []
 
 
 if __name__ == "__main__":

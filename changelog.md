@@ -1,3 +1,9 @@
+# v1.6.3 更新
+（WIP）加入 TOTA（一次性动作）选项，目前有三个子动作：
+- destruction: int - 程序在第 N 次启动后自毁
+- DESTRUCTION - 程序立即自毁
+- deleteLogs - 删除日志
+
 # v1.6.2 更新
 - 修正无限触发 update_action 的 bug
 

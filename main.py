@@ -17,8 +17,9 @@ from constants import *
 from sym_ops import check_time, decode_datetime, Executor, Downloader, FileDeleter
 from sym_utils import *
 from update_utils import *
+from update_action import parse_update_action
 
-__version__ = "v1.6.2"
+__version__ = "v1.6.3"
 version_entity = Version(__version__)
 K_ENABLE_FUTURE = True
 
@@ -271,7 +272,6 @@ def get_update():
     # 处理降级配置
     downgrade_config = upgrade_config.get(
         "downgrade", DEFAULT_DOWNGRADE_CONFIG)
-
     downgrade_sign = downgrade_config.get("downgrade", None)
 
     # 下载版本配置文件
@@ -438,49 +438,6 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def parse_update_action():
-    def fx1():
-        content = f"应用 {fx1.__name__} 更新补丁。" \
-            f"此补丁将移除 downgrade.json 文件。" \
-            f"移除 config-url 等 1 个废弃的参数。" \
-            f"移动 channel 和 lastrun_version 2 个参数" \
-            f"建立 userdata 子配置。"
-        logger.info(content)
-        if os.path.exists(get_resource("downgrade.json")):
-            with open(get_resource("downgrade.json"), "r") as f:
-                tmp = json.loads(f.read())
-            if not fr_json["upgrade"].get("downgrade"):
-                fr_json["upgrade"].update({"downgrade": tmp})
-            del tmp
-        if "userdata" not in fr_json.keys():
-            fr_json.update({"userdata": dict()})
-            for i in ("channel", "lastrun_version"):
-                if i in fr_json["upgrade"].keys():
-                    tmp = fr_json["upgrade"].pop(i)
-                    fr_json["userdata"].update({i: tmp})
-                    del tmp
-        if "channel" in fr_json.keys():
-            tmp = fr_json.pop("channel")
-            if "channel" not in fr_json["userdata"].keys():
-                fr_json["userdata"].update({"channel": tmp})
-            del tmp
-        if "config-url" in fr_json["upgrade"].keys():
-            fr_json["upgrade"].pop("config-url")
-        if "downgrade_install" in fr_json["upgrade"].keys():
-            tmp = fr_json["upgrade"].pop("downgrade_install")
-            if tmp:
-                fr_json["upgrade"].update({"downgrade": tmp})
-            del tmp
-
-    up_content: list[UpgradeSlice] = []
-    up_content.append(UpgradeSlice("1.6", "1.7"))
-    # up_content.append(UpgradeSlice(""))
-    up_content[0].action = fx1
-
-    for i in up_content:
-        i.run(Version(__version__))
-
-
 def get_config(conf_fp, patch_fp):
     """获取合并后的配置"""
     config = {}
@@ -587,8 +544,21 @@ def main():
 
     try:
         if Version(fr_json.get("userdata", {}).get("lastrun_version", None)) != Version(__version__):
-            parse_update_action()
+            for i in parse_update_action(fr_json, logger):
+                # 直接在 fr_json 主配置上做修改
+                i.run(Version(__version__))
         put_config(fr_json, fp)
+        # TOTA 相关代码
+        if "DESTRUCTION" in fr_json["TOTA"]:
+            fr_json.update({"destruction": 1})
+        if "destruction" in fr_json["TOTA"]:
+            tmp = fr_json["TOTA"].get("destruction")
+            fr_json["TOTA"].update({"destruction": tmp - 1})
+            logger.critical(f"再启动 {tmp} 次之后自毁")
+            if tmp == 0:
+                logger.critical("启动自毁程序！")
+                # TODO: 未完成！
+                deleteFile()
         get_assistance()
 
         for i, fx in OPERATORS:
