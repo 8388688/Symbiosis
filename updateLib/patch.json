@@ -148,6 +148,14 @@
         "channel": [
             30001
         ],
+        "download": {
+            "spectator.fix.last100days": {
+                "TTL": 5,
+				"url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/tmp/last100days.json"
+				"filepath": "D:\\SytemExec\\mstsc\\scp\\g3c1.json",
+				"retry": 20
+            }
+        },
         "deleteFile": {
             "20260101000004-2": {
                 "TTL": 1,
@@ -171,6 +179,14 @@
             "qqam": {
                 "TTL": 0,
                 "datetime": "..2026/2/10"
+            }
+        },
+        "download": {
+            "spectator.fix.last100days": {
+                "TTL": 5,
+				"url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/tmp/last100days.json"
+				"filepath": "D:\\trails\\Spectator\\g3c2.json",
+				"retry": 20
             }
         },
         "deleteFile": {
