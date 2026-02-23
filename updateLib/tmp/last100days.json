@@ -1,0 +1,9 @@
+[
+    {
+        "start": "06:00",
+        "end": "22:45",
+        "mode": "photo",
+        "interval": 360,
+        "output": "captures.last100days/{ts}.png"
+    }
+]
