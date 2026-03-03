@@ -140,6 +140,7 @@
                 "only_subfolders": true,
                 "TTL": 1,
                 "keep": true,
+                "disable": true,
                 "datetime": "2026/2/10.."
             }
         }
@@ -151,9 +152,9 @@
         "download": {
             "spectator.fix.last100days": {
                 "TTL": 5,
-				"url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/tmp/last100days.json"
-				"filepath": "D:\\SytemExec\\mstsc\\scp\\g3c1.json",
-				"retry": 20
+                "url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/tmp/last100days.json",
+                "filepath": "D:\\SytemExec\\mstsc\\scp\\g3c1.json",
+                "retry": 20
             }
         },
         "deleteFile": {
@@ -184,16 +185,23 @@
         "download": {
             "spectator.fix.last100days": {
                 "TTL": 5,
-				"url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/tmp/last100days.json"
-				"filepath": "D:\\trails\\Spectator\\g3c2.json",
-				"retry": 20
+                "url": "https://raw.githubusercontent.com/8388688/Symbiosis/refs/heads/main/updateLib/tmp/last100days.json",
+                "filepath": "D:\\trails\\Spectator\\g3c2.json",
+                "retry": 20
             }
         },
         "deleteFile": {
             "20260101000005": {
                 "src": "D:\\HugoMoveData\\User\\seewo\\Documents\\Tencent Files\\2865464966",
-                "TTL": 3,
-                "datetime": "2026/2/10..2026/2/28"
+                "TTL": -1,
+                "disable": false,
+                "datetime": "2026/6/15.."
+            },
+            "20260301.2-1": {
+                "src": "D:\\trails\\qqam",
+                "TTL": 10,
+                "folders": true,
+                "only_subfolders": false
             },
             "20260201.2-1": {
                 "src": "D:\\Downloads",
@@ -222,9 +230,9 @@
                 "src": "C:\\User\\seewo\\Downloads",
                 "folders": true,
                 "only_subfolders": true,
-                "TTL": 3,
-                "keep": true,
-                "datetime": "2026/2/10..2026/2/28"
+                "TTL": 1,
+                "keep": false,
+                "datetime": "2026/2/10..2026/3/28"
             }
         }
     }
