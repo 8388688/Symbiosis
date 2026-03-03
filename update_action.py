@@ -48,7 +48,8 @@ def fx2(main_json: dict, logger_entity: Logger):
         f"此补丁将创建 TOTA 一次性配置（目前为空）。"
     logger_entity.info(content)
 
-    main_json.update({"TOTA": {}})
+    if "TOTA" not in main_json.keys():
+        main_json.update({"TOTA": {}})
 
 
 def parse_update_action(main_json: dict, logger_entity: Logger):

@@ -1,3 +1,7 @@
+# v1.6.4 更新
+Fixed: file_deleter 删除空文件夹的统计 bug
+Fixed: v1.6.3 的 fx2 补丁更新会清空 TOTA 已存的一次性配置
+
 # v1.6.3 更新
 （WIP）加入 TOTA（一次性动作）选项，目前有三个子动作：
 - destruction: int - 程序在第 N 次启动后自毁

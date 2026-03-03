@@ -19,7 +19,7 @@ from sym_utils import *
 from update_utils import *
 from update_action import parse_update_action
 
-__version__ = "v1.6.3"
+__version__ = "v1.6.4"
 version_entity = Version(__version__)
 K_ENABLE_FUTURE = True
 
@@ -521,6 +521,7 @@ def run_series(type_, config, fx: Callable):
     logger.debug(f"执行 {type_} 操作")
     eaten = []
     tmp = config
+    logger.debug(f"{tmp=}")
 
     for k, v in tmp.items():
         ttl = v.get("TTL", -1)
