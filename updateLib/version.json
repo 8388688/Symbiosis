@@ -139,6 +139,13 @@
             "sha256-win": "37196fc5e07000cecd40b9f7cef8df8cd7086ab1f319fdf7fe4df3648afa58a5",
             "sha256-con": "6e10e081b271bde037b535b5f0db72eada5c61b93966207eeb49bf3956f9dcd8",
             "enable-config-update": true
+        },
+        "v1.6.5": {
+            "url-win": "https://github.com/8388688/Symbiosis/releases/download/v1.6.5/Symbiosis.exe",
+            "url-con": "https://github.com/8388688/Symbiosis/releases/download/v1.6.5/Symbiosis_console.exe",
+            "sha256-win": "804cea8ad3483b5ba6f5a9e970723a246cfe92c554f15678d22e295d5a3de146",
+            "sha256-con": "6b00527e4ae81a579013eae0cf74a91295628ab50dac6bd03d6c97080862645f",
+            "enable-config-update": true
         }
     }
 }
