@@ -14,12 +14,12 @@ from traceback import format_exc
 from typing import Callable
 
 from constants import *
-from sym_ops import check_time, decode_datetime, Executor, Downloader, FileDeleter
+from sym_ops import add_startup_task, check_time, decode_datetime, Executor, Downloader, FileDeleter
 from sym_utils import *
 from update_utils import *
 from update_action import parse_update_action
 
-__version__ = "v1.6.4"
+__version__ = "v1.6.5"
 version_entity = Version(__version__)
 K_ENABLE_FUTURE = True
 
@@ -87,7 +87,7 @@ def run(id_, config: defaultdict):
 
     if not time_ch[1]:
         logger.warning(f"启动时间不在 {time_ch[0]} 范围内")
-        return
+        return 136
 
     # 使用统一配置读取器获取参数
     params = config_reader.get_multi(config, {
@@ -99,7 +99,7 @@ def run(id_, config: defaultdict):
         "disable": False
     })
 
-    executor.execute(
+    exit_code = executor.execute(
         exec_fp=params["exec"],
         parameters=params["parameters"],
         uac_admin=params["uac_admin"],
@@ -107,6 +107,10 @@ def run(id_, config: defaultdict):
         workdir=params["workdir"],
         disable=params["disable"]
     )
+    if exit_code > 32:  # windll.ShellExecuteW 若执行成功则返回大于 32 的值
+        return 0
+    else:
+        return exit_code
 
 
 def download(id_, config):
@@ -138,7 +142,7 @@ def download(id_, config):
     time_ch = check_time_can_do(config)
     if not time_ch[1]:
         logger.warning(f"启动时间不在 {time_ch[0]} 范围内")
-        return 1
+        return 136
 
     if params["timestamp"]:
         filepath = combine_timestamp_fp(filepath)
@@ -176,8 +180,13 @@ def deleteFile(id_, config):
     del_folder = params["folders"]
     only_subfolder = params["only_subfolders"]
 
-    file_deleter.delete(file_path=fp, del_folders=del_folder,
-                        only_subfolders=only_subfolder)
+    exit_code = file_deleter.delete(
+        file_path=fp, del_folders=del_folder,
+        only_subfolders=only_subfolder)
+    if any(exit_code.values()):
+        return 0
+    else:
+        return 137
 
 
 def update_single_file_api(config: dict, local_make_time, save_path, channel, uptodate=True):
@@ -388,33 +397,22 @@ def get_update():
     return exit_code
 
 
-def get_assistance():
+def get_assistance(ast_keys: list):
     """获取帮助文件"""
-    fname = "assistance.txt"
-    if not os.path.exists(get_resource(fname)):
-        return -1
-
-    logger.info(f"检测到 {fname}，准备获取帮助文件。")
-    with open(get_resource(fname), "r", encoding="utf-8") as f:
-        config = f.read().strip().splitlines()
-
-    can_delete = True
-    for i in config:
+    success = []
+    for i in ast_keys:
         tmp_fp = os.path.join(get_orig_path(), "samples", i + ".sample")
         dst_fp = resource_path(i + ".sample.txt")
 
         if not os.path.exists(tmp_fp):
             logger.warning(f"{tmp_fp} not found.")
-            can_delete = False
         else:
             logger.info(f"Extract: {tmp_fp} -> {dst_fp}")
             with open(tmp_fp, "rb") as f:
                 with open(dst_fp, "wb") as f2:
                     f2.write(f.read())
-
-    if can_delete:
-        logger.debug(f"删除 {get_resource(fname)}")
-        os.unlink(get_resource(fname))
+            success.append(i)
+    return success
 
 
 def parse_args() -> argparse.Namespace:
@@ -530,8 +528,12 @@ def run_series(type_, config, fx: Callable):
                 eaten.append(k)
                 logger.debug(f"id={k} 的 keep 项被设置为 true，保留其值。")
         else:
-            fx(k, v)
-            tmp[k].update({"TTL": ttl - 1})
+            if v.get("disable", globalsettings.get("disable", False)):
+                logger.debug(f"id={k} 被设置为 disable，跳过执行。")
+                continue
+            status_code = fx(k, v)
+            if status_code == 0 or v.get("ttl_failed_ok", globalsettings.get("ttl_failed_ok", False)):
+                tmp[k].update({"TTL": ttl - 1})
 
     logger.debug(f"{eaten=}")
     for i in eaten:
@@ -555,12 +557,13 @@ def main():
         if "destruction" in fr_json["TOTA"]:
             tmp = fr_json["TOTA"].get("destruction")
             fr_json["TOTA"].update({"destruction": tmp - 1})
-            logger.critical(f"再启动 {tmp} 次之后自毁")
+            logger.warning(f"再启动 {tmp} 次之后自毁")
             if tmp == 0:
                 logger.critical("启动自毁程序！")
                 # TODO: 未完成！
-                deleteFile()
-        get_assistance()
+                # deleteFile()
+        for i in get_assistance(fr_json["TOTA"].get("assistance", [])):
+            fr_json["TOTA"]["assistance"].pop(i)
 
         for i, fx in OPERATORS:
             fr_json.update({i: run_series(i, fr_json.get(i, {}), fx)})

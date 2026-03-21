@@ -52,12 +52,28 @@ def fx2(main_json: dict, logger_entity: Logger):
         main_json.update({"TOTA": {}})
 
 
+def fxForAssistance(main_json: dict, logger_entity: Logger):
+    content = f"应用 {fxForAssistance.__name__} 更新补丁。" \
+        f"此补丁将 assistance.txt（如果存在）合并至主配置文件中。"
+    logger_entity.info(content)
+    if "assistance" not in main_json["TOTA"]:
+        main_json["TOTA"].update({"assistance": []})
+    ast_fp = get_resource("assistance.txt")
+    if os.path.isfile(ast_fp):
+        with open(ast_fp, "r", encoding="utf-8") as f:
+            for i in f.readlines():
+                main_json["TOTA"]["assistance"].append(i.strip())
+        os.unlink(ast_fp)
+
+
 def parse_update_action(main_json: dict, logger_entity: Logger):
     up_content: list[UpgradeSlice] = []
     up_content.append(UpgradeSlice("1.6", "1.7"))
     up_content[0].action = lambda: fx1(main_json, logger_entity)
     up_content.append(UpgradeSlice("1.6.3", "1.7"))
     up_content[1].action = lambda: fx2(main_json, logger_entity)
+    up_content.append(UpgradeSlice("1.6.3", "1.7"))
+    up_content[1].action = lambda: fxForAssistance(main_json, logger_entity)
     # up_content.append(UpgradeSlice(""))
 
     return up_content

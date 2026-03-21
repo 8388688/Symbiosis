@@ -1,3 +1,11 @@
+# v1.6.5 更新
+Added: 将自身加入“登陆时执行的 Windows 计划任务”，但目前默认禁用。
+Added: ttl_failed_ok 参数，默认为 true，被设置为 false 时允许在 TTL 机制下某些操作失败时 TTL 不自减 1。
+本参数支持置于全局配置（globalsettings）中，也支持置于单项配置中，单项配置优先级更高。
+Fixed: file_deleter 删除失败的项目统计数量往往小于实际删除失败文件夹个数。
+Modified: assistance.txt 获取帮助文件合并至 TOTA 中。
+Modified: 现在所有常规操作都支持 disable 参数啦（优先级高于 retry 参数）。
+
 # v1.6.4 更新
 Fixed: file_deleter 删除空文件夹的统计 bug
 Fixed: v1.6.3 的 fx2 补丁更新会清空 TOTA 已存的一次性配置
