@@ -1,4 +1,5 @@
-// 本文最后更新于 2025-12-28
+// 本文最后更新于 2026-03-21
+// 程序运行顺序: TOTA > execute > deleteFile > download > get_update
 {
     "execute": {
         "task1": {
@@ -18,9 +19,10 @@
             "workdir": PathLike,
             "disable": false,
             "datetime": "2000/1/1..",
-            "TTL": int, // 表示再执行多少次就删除这个任务，设置为负数表示永不删除。
+            "TTL": int, // 每次执行后 TTL 自减 1，TTL 归零后不再执行此项，除非用户手动重置。设置为负数表示无限执行。
+            "ttl_failed_ok": bool, // 默认为 true，表示即使执行失败也会触发 TTL 的自减行为，设置为 false 则仅在执行成功时才触发 TTL 的自减行为。
+            // 注意：disable 是一个独立的开关，设置为 true 时会直接跳过 ttl_failed_ok 参数，TTL 也就不会自减。
             "keep": bool = true, // TTL 归零后是否在配置文件中删除此下载项。
-            // 注意：TTL 是行为触发，只要运行了对应的配置，不管执行是否成功 TTL 都会自减 1。
         },
         "task2": {
             ...
