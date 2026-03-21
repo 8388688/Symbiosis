@@ -50,7 +50,7 @@ class FileDeleter:
         try:
             # 不删除根路径本身（如果 only_subfolders=True）
             if only_subfolders and os.path.normpath(dir_path) == os.path.normpath(root_path):
-                return True
+                return False
 
             os.chmod(dir_path, 0o777)
             os.rmdir(dir_path)
@@ -61,7 +61,7 @@ class FileDeleter:
                 f"Delete failed, error {e.winerror}: {e.strerror} "
                 f"(Code {e.errno}) {e.filename=}, {e.filename2=}."
             )
-            return False
+            raise
 
     def delete(
         self,
@@ -107,7 +107,7 @@ class FileDeleter:
 
         self.logger.info(
             f"总计删除 {stats['size']} 字节，{stats['files']} 个文件，"
-            f"{stats['dirs']} 个文件夹。"
+            f"{stats['dirs']} 个文件夹，删除失败 {len(exclude_dirs)} 个项目。"
         )
 
         return stats

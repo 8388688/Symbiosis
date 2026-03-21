@@ -30,9 +30,8 @@ class Downloader:
         RequestException: (1, "Request Error {url}"),
     }
 
-    def __init__(self, logger, enable_future=True):
+    def __init__(self, logger):
         self.logger = logger
-        self.K_ENABLE_FUTURE = enable_future
         self.CHUNK_SIZE = 16384
 
     def _handle_request(self, url: str, headers: dict) -> tuple:
@@ -53,7 +52,7 @@ class Downloader:
 
     def _handle_redirects(self, url: str, headers: dict, r) -> tuple:
         """处理 HTTP 重定向"""
-        if not (300 <= r.status_code < 400 and self.K_ENABLE_FUTURE):
+        if not (300 <= r.status_code < 400):
             return r, 0
 
         visited_urls = {url}

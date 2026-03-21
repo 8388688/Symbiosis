@@ -2,6 +2,7 @@
 from .file_deleter import FileDeleter, DeletionError
 from .downloader import Downloader, DownloadError
 from .executor import Executor, ExecutionError
+from .misc import add_startup_task
 import re
 import time
 
@@ -14,6 +15,7 @@ __all__ = [
     "ExecutionError",
     "DownloadError",
     "DeletionError",
+    "add_startup_task"
 ]
 
 
