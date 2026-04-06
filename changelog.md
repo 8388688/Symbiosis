@@ -1,3 +1,6 @@
+# v1.6.5.1 更新
+Fixed: 补丁配置未绑定
+
 # v1.6.5 更新
 Added: 将自身加入“登陆时执行的 Windows 计划任务”，但目前默认禁用。
 Added: ttl_failed_ok 参数，默认为 true，被设置为 false 时允许在 TTL 机制下某些操作失败时 TTL 不自减 1。

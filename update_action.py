@@ -73,7 +73,7 @@ def parse_update_action(main_json: dict, logger_entity: Logger):
     up_content.append(UpgradeSlice("1.6.3", "1.7"))
     up_content[1].action = lambda: fx2(main_json, logger_entity)
     up_content.append(UpgradeSlice("1.6.3", "1.7"))
-    up_content[1].action = lambda: fxForAssistance(main_json, logger_entity)
+    up_content[2].action = lambda: fxForAssistance(main_json, logger_entity)
     # up_content.append(UpgradeSlice(""))
 
     return up_content
